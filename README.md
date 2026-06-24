@@ -52,4 +52,3 @@ scripts/
 ```
 
 `assets/framework-template/` is the source template for new projects. Runtime dependencies, build output, and release snapshots are intentionally ignored by Git.
-
