@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.npm-cache/
+.playwright-cli/
+.DS_Store
+
+# MLP generated platform metadata and release snapshots
+.mlp/
+
+# Local project/output folders should live outside this tool repo
+mlp-projects/
+outputs/
+project-backups/
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+*.backup
+

@@ -1,0 +1,4 @@
+interface:
+  display_name: "MLP"
+  short_description: "Build mobile low-fi PM prototypes with the standard review workspace."
+  default_prompt: "Use mlp to initialize or modify a mobile low-fidelity clickable prototype with the standard project shell, Product Notes, UI checklist, UI spec, local preview, and optional cloud deployment."
