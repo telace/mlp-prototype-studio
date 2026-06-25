@@ -44,6 +44,7 @@ const projectRoot = projectArg.startsWith('/') ? resolve(projectArg) : resolve(d
 const srcRoot = resolve(projectRoot, 'src');
 const mainPath = resolve(srcRoot, 'main.jsx');
 const stylesPath = resolve(srcRoot, 'styles.css');
+const legacyStylesPath = resolve(srcRoot, 'legacy/legacy.css');
 const packagePath = resolve(projectRoot, 'package.json');
 const appPath = resolve(srcRoot, 'app/App.jsx');
 const legacyPath = resolve(srcRoot, 'legacy/LegacyApp.jsx');
@@ -128,9 +129,82 @@ mkdirSync(resolve(projectRoot, 'scripts'), { recursive: true });
 const legacySource = projectMain
   .replace(/import\s+\{\s*createRoot\s*\}\s+from\s+['"]react-dom\/client['"];\n/, '')
   .replace(/import\s+['"]\.\/styles\.css['"];\n/, '')
-  .replace(/createRoot\(document\.getElementById\(['"]root['"]\)\)\.render\(<App \/>\);/, 'export default App;');
+  .replace(/createRoot\(document\.getElementById\(['"]root['"]\)\)\.render\(<App \/>\);/, 'export default App;')
+  .replace(
+    'function App() {',
+    `function parseLegacyRoute() {
+  if (typeof window === 'undefined') return { page: pageDirectory[0]?.id || 'sample', stateId: null };
+  const [pageCandidate, stateCandidate] = window.location.hash.replace(/^#\\/?/, '').split('/').filter(Boolean);
+  const fallbackPage = pageDirectory[0]?.id || 'sample';
+  const page = pageDirectory.some((item) => item.id === pageCandidate) ? pageCandidate : fallbackPage;
+  const states = pageStates[page] || [{ id: 'default' }];
+  const stateId = states.some((state) => state.id === stateCandidate) ? stateCandidate : states[0]?.id || null;
+  return { page, stateId };
+}
+
+function getLegacyRouteHash(page, stateId) {
+  const normalizedState = stateId && stateId !== 'default' ? \`/\${stateId}\` : '';
+  return \`#/\${page}\${normalizedState}\`;
+}
+
+function App() {`
+  )
+  .replace(
+    "const [page, setPage] = useState('upload');\n  const [stateByPage, setStateByPage] = useState({ upload: 'unuploaded', analysis: 'parsing' });",
+    `const initialRoute = parseLegacyRoute();
+  const [page, setPage] = useState(initialRoute.page);
+  const [stateByPage, setStateByPage] = useState(() => ({
+    upload: 'unuploaded',
+    analysis: 'parsing',
+    ...(initialRoute.stateId ? { [initialRoute.page]: initialRoute.stateId } : {})
+  }));`
+  )
+  .replace(
+    `  useEffect(() => {
+    setActiveInteraction(null);
+  }, [page, stateId]);
+`,
+    `  useEffect(() => {
+    setActiveInteraction(null);
+  }, [page, stateId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const syncFromHash = () => {
+      const next = parseLegacyRoute();
+      setPage(next.page);
+      if (next.stateId) {
+        setStateByPage((current) => ({ ...current, [next.page]: next.stateId }));
+      }
+    };
+    window.addEventListener('hashchange', syncFromHash);
+    return () => window.removeEventListener('hashchange', syncFromHash);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const nextHash = getLegacyRouteHash(page, stateId);
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, '', nextHash);
+    }
+  }, [page, stateId]);
+`
+  )
+  .replace(/\bmodal-layer\b/g, 'mlp-legacy-modal-layer')
+  .replace(/\bmodal-backdrop\b/g, 'mlp-legacy-modal-backdrop')
+  .replace(/\bprototype-modal\b/g, 'mlp-legacy-prototype-modal')
+  .replace(/\bmodal-actions\b/g, 'mlp-legacy-modal-actions')
+  .replace(/\balbum-backdrop\b/g, 'mlp-legacy-album-backdrop');
 
 writeFileSync(legacyPath, legacySource);
+
+const legacyStyles = readFileSync(stylesPath, 'utf8')
+  .replace(/\bmodal-layer\b/g, 'mlp-legacy-modal-layer')
+  .replace(/\bmodal-backdrop\b/g, 'mlp-legacy-modal-backdrop')
+  .replace(/\bprototype-modal\b/g, 'mlp-legacy-prototype-modal')
+  .replace(/\bmodal-actions\b/g, 'mlp-legacy-modal-actions')
+  .replace(/\balbum-backdrop\b/g, 'mlp-legacy-album-backdrop');
+writeFileSync(legacyStylesPath, legacyStyles);
 
 writeFileSync(appPath, `import LegacyApp from '../legacy/LegacyApp.jsx';
 
@@ -147,6 +221,12 @@ import './styles.css';
 createRoot(document.getElementById('root')).render(<App />);
 `);
 
+writeFileSync(stylesPath, `@import './prototype-ui/tokens.css';
+@import './prototype-ui/patterns.css';
+@import './pages/styles/pages.css';
+@import './legacy/legacy.css';
+`);
+
 copyFileSync(templateReview, projectReview);
 
 const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
@@ -154,6 +234,7 @@ packageJson.scripts = packageJson.scripts || {};
 packageJson.scripts['mlp:review'] = 'node scripts/mlp-loop-review.mjs';
 packageJson.scripts['mlp:framework-sync'] = `node ${resolve(skillRoot, 'scripts/sync-framework-guards.mjs')} .`;
 packageJson.scripts['mlp:migrate-layered'] = `node ${resolve(skillRoot, 'scripts/migrate-project-to-layered.mjs')} .`;
+packageJson.scripts['mlp:migrate-full'] = `node ${resolve(skillRoot, 'scripts/migrate-project-full.mjs')} .`;
 writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
 if (!options.skipVerify) {

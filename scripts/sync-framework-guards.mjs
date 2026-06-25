@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -8,9 +8,19 @@ const projectRoot = resolve(process.argv[2] || process.cwd());
 const packagePath = resolve(projectRoot, 'package.json');
 const stylesPath = resolve(projectRoot, 'src/styles.css');
 const mainPath = resolve(projectRoot, 'src/main.jsx');
+const pagesStylesDir = resolve(projectRoot, 'src/pages/styles');
+const pagesStylesPath = resolve(pagesStylesDir, 'pages.css');
 const projectScriptsDir = resolve(projectRoot, 'scripts');
+const templatePrototypeUiDir = resolve(templateRoot, 'src/prototype-ui');
+const projectPrototypeUiDir = resolve(projectRoot, 'src/prototype-ui');
+const templateProjectTestCasesDir = resolve(templateRoot, 'src/project/test-cases');
+const projectProjectTestCasesDir = resolve(projectRoot, 'src/project/test-cases');
 const reviewScriptSource = resolve(templateRoot, 'scripts/mlp-loop-review.mjs');
 const reviewScriptTarget = resolve(projectScriptsDir, 'mlp-loop-review.mjs');
+const runtimeReviewScriptSource = resolve(templateRoot, 'scripts/mlp-runtime-review.mjs');
+const runtimeReviewScriptTarget = resolve(projectScriptsDir, 'mlp-runtime-review.mjs');
+const visualReviewScriptSource = resolve(templateRoot, 'scripts/mlp-visual-review.mjs');
+const visualReviewScriptTarget = resolve(projectScriptsDir, 'mlp-visual-review.mjs');
 
 if (!existsSync(packagePath) || !existsSync(stylesPath)) {
   console.error(`Not an MLP React project: ${projectRoot}`);
@@ -19,11 +29,43 @@ if (!existsSync(packagePath) || !existsSync(stylesPath)) {
 
 mkdirSync(projectScriptsDir, { recursive: true });
 copyFileSync(reviewScriptSource, reviewScriptTarget);
+if (existsSync(runtimeReviewScriptSource)) {
+  copyFileSync(runtimeReviewScriptSource, runtimeReviewScriptTarget);
+}
+if (existsSync(visualReviewScriptSource)) {
+  copyFileSync(visualReviewScriptSource, visualReviewScriptTarget);
+}
+if (existsSync(templatePrototypeUiDir)) {
+  mkdirSync(projectPrototypeUiDir, { recursive: true });
+  if (templatePrototypeUiDir !== projectPrototypeUiDir) {
+    cpSync(templatePrototypeUiDir, projectPrototypeUiDir, { recursive: true });
+  }
+}
+if (existsSync(templateProjectTestCasesDir)) {
+  mkdirSync(projectProjectTestCasesDir, { recursive: true });
+  if (templateProjectTestCasesDir !== projectProjectTestCasesDir) {
+    cpSync(templateProjectTestCasesDir, projectProjectTestCasesDir, { recursive: true });
+  }
+}
+mkdirSync(pagesStylesDir, { recursive: true });
+if (!existsSync(pagesStylesPath)) {
+  writeFileSync(pagesStylesPath, '/* Project page styles live here. Keep framework shell styles in src/styles.css. */\n');
+}
 
 const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
 packageJson.scripts = packageJson.scripts || {};
 packageJson.scripts['mlp:review'] = 'node scripts/mlp-loop-review.mjs';
-packageJson.scripts['mlp:framework-sync'] = `node ${resolve(skillRoot, 'scripts/sync-framework-guards.mjs')} .`;
+packageJson.scripts['mlp:runtime-review'] = 'node scripts/mlp-runtime-review.mjs';
+packageJson.scripts['mlp:visual-review'] = 'node scripts/mlp-visual-review.mjs';
+packageJson.scripts['mlp:visual-snapshot'] = 'node scripts/mlp-visual-review.mjs --snapshot-only';
+packageJson.scripts['mlp:fast-check'] = 'npm run mlp:review && npm run build';
+packageJson.scripts['mlp:route-check'] = 'npm run mlp:fast-check && npm run mlp:runtime-review';
+packageJson.scripts['mlp:acceptance'] = 'npm run mlp:route-check';
+packageJson.scripts['mlp:visual-acceptance'] = 'npm run mlp:acceptance && npm run mlp:visual-review';
+packageJson.scripts['mlp:framework-sync'] = `node ${resolve(skillRoot, 'scripts/sync-framework-full.mjs')} .`;
+packageJson.scripts['mlp:framework-patch'] = `node ${resolve(skillRoot, 'scripts/sync-framework-guards.mjs')} .`;
+packageJson.scripts['mlp:migrate-full'] = `node ${resolve(skillRoot, 'scripts/migrate-project-full.mjs')} .`;
+packageJson.scripts['mlp:split-modules'] = `node ${resolve(skillRoot, 'scripts/split-project-modules.mjs')} .`;
 packageJson.scripts['mlp:release'] = `node ${resolve(skillRoot, 'scripts/mlp-version.mjs')} release .`;
 packageJson.scripts['mlp:versions'] = `node ${resolve(skillRoot, 'scripts/mlp-version.mjs')} list .`;
 packageJson.scripts['mlp:rollback'] = `node ${resolve(skillRoot, 'scripts/mlp-version.mjs')} rollback .`;
@@ -500,25 +542,25 @@ body,
 }
 
 .phone[data-theme="light"] {
-  --app-bg: #F5F5F2;
+  --app-bg: #F6F7F8;
   --surface-1: #FFFFFF;
-  --surface-2: #EFEFED;
-  --surface-3: #E3E3DF;
-  --placeholder: #B8B8B1;
-  --border: #E1E1DD;
-  --text-strong: #1C1C1A;
-  --text-muted: #74746E;
-  --text-soft: #4F4F4A;
-  --text-subtle: #74746E;
-  --inverse-bg: #1C1C1A;
+  --surface-2: #EEF0F2;
+  --surface-3: #E1E4E8;
+  --placeholder: #B7BDC5;
+  --border: #E0E3E7;
+  --text-strong: #1F2328;
+  --text-muted: #667085;
+  --text-soft: #4B5563;
+  --text-subtle: #667085;
+  --inverse-bg: #1F2328;
   --inverse-text: #FFFFFF;
   --action-primary-text: #FFFFFF;
   --topbar-bg: #FFFFFF;
   --tabbar-bg: #FFFFFF;
-  --tabbar-border: #E5E5E0;
-  --tabbar-active-bg: #1C1C1A;
+  --tabbar-border: #E1E4E8;
+  --tabbar-active-bg: #1F2328;
   --tabbar-active-text: #FFFFFF;
-  --drawer-scrim: #1C1C1A;
+  --drawer-scrim: #1F2328;
 }
 
 .phone[data-theme] {
@@ -710,7 +752,7 @@ body,
 }
 ${shellEnd}`;
 const guardBlock = `${guardStart}
-.phone[data-theme] :is(h1, h2, h3, h4, p, span, strong, em, b, label, input, textarea, button) {
+.phone[data-theme] :is(h1, h2, h3, h4, p, strong, em, b, label, input, textarea) {
   color: inherit;
 }
 
@@ -788,6 +830,12 @@ const guardBlock = `${guardStart}
   border: var(--line) var(--border);
 }
 
+.phone[data-theme] :is(.carrier-primary, .works-tabs button.active) {
+  background: var(--inverse-bg);
+  color: var(--inverse-text);
+  border-color: var(--inverse-bg);
+}
+
 .phone[data-theme] .login-method-option > span {
   background: var(--surface-3);
   color: var(--text-strong);
@@ -800,6 +848,11 @@ const guardBlock = `${guardStart}
 
 .phone[data-theme] .member-hero-copy {
   color: var(--text-strong);
+}
+
+.phone[data-theme] .member-hero-copy .eyebrow {
+  background: var(--inverse-bg);
+  color: var(--inverse-text);
 }
 ${guardEnd}`;
 
@@ -861,11 +914,24 @@ const legacyFrameworkSelectors = [
   '.directory-footer',
   '.phone:has(.tabbar)::after'
 ];
-const normalizedStyles = migratePhoneWorkspaceTokens(legacyFrameworkSelectors.reduce((source, selector) => {
+const ensurePrototypeUiImports = (source) => {
+  const imports = [
+    "@import './prototype-ui/tokens.css';",
+    "@import './prototype-ui/patterns.css';",
+    "@import './pages/styles/pages.css';"
+  ];
+  const withoutExisting = source
+    .replace(/@import\s+['"]\.\/prototype-ui\/tokens\.css['"];\s*/g, '')
+    .replace(/@import\s+['"]\.\/prototype-ui\/patterns\.css['"];\s*/g, '')
+    .replace(/@import\s+['"]\.\/pages\/styles\/pages\.css['"];\s*/g, '')
+    .trimStart();
+  return `${imports.join('\n')}\n\n${withoutExisting}`;
+};
+const normalizedStyles = ensurePrototypeUiImports(migratePhoneWorkspaceTokens(legacyFrameworkSelectors.reduce((source, selector) => {
   return removeRulesContainingSelector(removeLegacyRule(source, selector), selector);
 }, styles))
   .replace(/\n\.directory-footer,\s*(?=\n\.phone\[data-theme="dark"\])/g, '\n')
-  .replace(/\n\.notes-guide-toggle,\s*(?=\n\.phone\[data-theme="dark"\])/g, '\n');
+  .replace(/\n\.notes-guide-toggle,\s*(?=\n\.phone\[data-theme="dark"\])/g, '\n'));
 const replaceManagedBlock = (source, start, end, block) => {
   const pattern = new RegExp(`${escapeRegExp(start)}[\\s\\S]*?${escapeRegExp(end)}`, 'g');
   return `${source.replace(pattern, '').trimEnd()}\n\n${block}\n`;
@@ -874,9 +940,20 @@ const withShellGuard = replaceManagedBlock(normalizedStyles, shellStart, shellEn
 const nextStyles = replaceManagedBlock(withShellGuard, guardStart, guardEnd, guardBlock);
 writeFileSync(stylesPath, nextStyles);
 
-console.log(`Synced MLP framework guards into ${projectRoot}`);
+console.log(`Synced MLP framework patch guards into ${projectRoot}`);
 console.log('- scripts/mlp-loop-review.mjs');
+console.log('- scripts/mlp-runtime-review.mjs');
+console.log('- scripts/mlp-visual-review.mjs');
+console.log('- src/prototype-ui shared components');
+console.log('- src/project/test-cases shared builders');
+console.log('- src/pages/styles/pages.css page style module');
 console.log('- package.json script: mlp:review');
-console.log('- package.json script: mlp:framework-sync');
+console.log('- package.json script: mlp:runtime-review');
+console.log('- package.json script: mlp:visual-review');
+console.log('- package.json script: mlp:acceptance');
+console.log('- package.json script: mlp:framework-sync -> complete framework sync');
+console.log('- package.json script: mlp:framework-patch -> guard patch sync');
+console.log('- package.json script: mlp:migrate-full');
+console.log('- package.json script: mlp:split-modules');
 console.log('- src/styles.css framework shell guard block');
 console.log('- src/styles.css strict framework guard block');

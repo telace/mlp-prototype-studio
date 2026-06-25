@@ -1,5 +1,5 @@
 import { Home, User, WandSparkles } from 'lucide-react';
-import { bindInteraction } from '../framework/interaction.js';
+import { bindInteraction } from '../../framework/interaction.js';
 
 export default function TabBar({ active, setPage, setActiveState, setActiveInteraction }) {
   const tabs = [

@@ -1,8 +1,10 @@
 import { ChevronRight } from 'lucide-react';
 import { directoryStatusCopy, getPageUpdateKey, pageDirectory } from '../project/project-data.js';
+import { getDirectoryItems } from './supportPages.js';
 
 export default function PageDirectory({ active, setPage, pageReadVersions }) {
-  const groups = pageDirectory.reduce((acc, item) => {
+  const directoryItems = getDirectoryItems(pageDirectory);
+  const groups = directoryItems.reduce((acc, item) => {
     acc[item.group] = acc[item.group] || [];
     acc[item.group].push(item);
     return acc;
@@ -46,4 +48,3 @@ export default function PageDirectory({ active, setPage, pageReadVersions }) {
     </aside>
   );
 }
-

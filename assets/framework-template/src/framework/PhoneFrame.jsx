@@ -1,7 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { getPageShellConfig, pageCopy } from '../project/project-data.js';
 import { renderPhoneScreen } from '../project/routes.jsx';
-import TabBar from '../pages/TabBar.jsx';
+import { TabBar } from '../pages/index.js';
 
 export default function PhoneFrame({ page, activeState, setPage, setActiveState, setActiveInteraction, theme }) {
   const shell = getPageShellConfig(page);

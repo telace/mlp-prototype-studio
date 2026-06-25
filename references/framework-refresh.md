@@ -9,6 +9,8 @@ Trigger phrases include:
 - `升级旧 mlp 项目框架`
 - `按最新 mlp 规范更新这个项目`
 - `把旧项目补上新的框架逻辑`
+- `把旧项目从 legacy 拆分到最终框架`
+- `语义拆分旧 MLP 项目`
 - `同步更新提示/版本提示`
 
 ## Goal
@@ -28,6 +30,7 @@ Framework maintenance must keep the implementation sources aligned. A framework 
 - `assets/framework-template/` for new project scaffolding.
 - `scripts/sync-framework-guards.mjs` for old project refreshes.
 - `assets/framework-template/scripts/mlp-loop-review.mjs` for drift detection and CI-style failure.
+- `assets/framework-template/scripts/mlp-runtime-review.mjs` for browser-level blank-page and route-state acceptance.
 
 Do not treat `SKILL.md`, `template-contract.md`, or this reference as executable by themselves. They describe the rule; the template, sync guard, and review script enforce it.
 
@@ -109,6 +112,14 @@ Allowed changes:
   - click to `window.location.reload()`
   - never auto-refresh
 - Deployment-related version verification.
+- Runtime route acceptance:
+  - Add `scripts/mlp-runtime-review.mjs`.
+  - Add package scripts `mlp:runtime-review` and `mlp:acceptance`.
+  - `mlp:runtime-review` must open every real page/state route in a real headless Chrome session, capture runtime exceptions, verify the workbench is not blank, verify phone pages render `.phone` and `.spec-panel`, verify docs pages render their docs stage, and verify intentionally invalid page/state URLs fall back to a valid route when the project has hash routing.
+  - `mlp:runtime-review` must also validate computed text/background contrast for direct text elements inside the phone in both `light` and `dark` themes. This catches wrong token combinations that static color-token checks cannot detect.
+  - `mlp:route-check` must run the normal refresh validation without visual review.
+  - `mlp:acceptance` remains the full non-visual final check and must not include visual review.
+  - `mlp:visual-acceptance` is the explicit visual gate and must run only when requested.
 - Managed framework guard updates:
   - Keep `MLP FRAMEWORK SHELL GUARDS` and `MLP STRICT FRAMEWORK GUARDS` as generated blocks.
   - Do not manually edit these blocks inside individual projects. Change the skill/template/sync script first, then re-run `refresh-project.sh`.
@@ -134,9 +145,36 @@ For a normal existing-project framework update, use the one-command wrapper firs
 <mobile-lowfi-prototype-skill-dir>/scripts/refresh-project.sh <project-slug-or-absolute-path>
 ```
 
-The wrapper resolves `<MLP_PROJECT_ROOT>/<project-slug>` when a slug is provided, runs the sync script, installs dependencies only when missing, runs `npm run mlp:review`, and runs `npm run build`. It is the preferred handoff command for other local agents or workflows such as Hermes. A passing run means the project has the latest managed framework guards, current review script, and buildable output. A failing run means the project needs manual structural migration before handoff.
+The wrapper resolves `<MLP_PROJECT_ROOT>/<project-slug>` when a slug is provided, runs the sync script, installs dependencies only when missing, then runs `npm run mlp:route-check` when available, falling back to `npm run mlp:fast-check` or `npm run mlp:review && npm run build`. It is the preferred handoff command for other local agents or workflows such as Hermes. A passing run means the project has the latest managed framework guards, current review script, buildable output, and route/runtime sanity where supported. A failing run means the project needs manual structural migration before handoff.
+
+By default, `refresh-project.sh` does not run visual review and does not create screenshots. Pass `--full-acceptance` for complete non-visual acceptance. Pass `--visual-acceptance` only when the user explicitly asks for visual review, screenshots, or visual baseline checks:
+
+```bash
+<mobile-lowfi-prototype-skill-dir>/scripts/refresh-project.sh <project-slug-or-absolute-path> --full-acceptance
+<mobile-lowfi-prototype-skill-dir>/scripts/refresh-project.sh <project-slug-or-absolute-path> --visual-acceptance
+```
+
+For a full structural migration to the final layered MLP framework, use:
+
+```bash
+<mobile-lowfi-prototype-skill-dir>/scripts/migrate-project-full.sh <project-slug-or-absolute-path>
+```
+
+This pipeline is stricter than `refresh-project.sh`. It creates a timestamped sibling backup, runs framework sync, runs semantic split when a legacy app exists, runs page/notes module split, performs post-migration audits for module structure, CSS split, hard-coded phone colors, old hand-written overlays, broad imports, and project data structure, then runs `npm run mlp:acceptance`. This migration acceptance is non-visual and does not capture screenshots by default. Run `npm run mlp:visual-acceptance` separately only when the user explicitly asks for visual review. It writes both JSON and Markdown reports under `.mlp/migration/reports/`. If a stage fails, it restores the project from the backup by default; pass `--keep-failed` only when you intentionally want to inspect the failed intermediate files.
+
+The full migration pipeline intentionally avoids unsafe business rewrites. It may auto-convert known MLP structures, but unknown page UI, hard-coded styles, or custom overlays must become blocking report items rather than silent partial migrations.
 
 For batch updates, call the wrapper once per project slug. Do not build a combined workspace or copy one project's `src/` over another project.
+
+For a compatibility-migrated project that still renders the real product through `src/legacy/LegacyApp.jsx`, run the semantic split command after the compatibility migration:
+
+```bash
+<mobile-lowfi-prototype-skill-dir>/scripts/semantic-split-legacy-app.sh <project-slug-or-absolute-path>
+```
+
+This command is the standard path for moving old single-file MLP apps into the final layered structure. It creates a timestamped backup, splits app shell into `src/app/App.jsx`, shared framework components into `src/framework/`, reusable phone UI into `src/prototype-ui/`, routes into `src/project/routes.jsx`, product screens into `src/pages/`, and docs into `src/docs/`. Project data must be split into the mandatory files `src/project/meta.js`, `directory.js`, `states.js`, `mock-data.js`, `routing.js`, `notes/index.js`, and `test-cases/index.js`; `src/project/project-data.js` remains only as a compatibility barrel. It removes `src/legacy` from the active project after the backup is created, removes unused framework-template sample pages from the real project, updates the project review script for real project pages, then runs `npm run mlp:review` and `npm run build`.
+
+If semantic split verification exposes missing imports or runtime-only dependencies, fix the split script itself before only patching the project. The migration script must reproduce the same corrected final structure on the next project.
 
 1. Inspect the existing project:
    - `src/main.jsx`
@@ -164,13 +202,14 @@ For batch updates, call the wrapper once per project slug. Do not build a combin
    This script must be treated as part of framework refresh. It copies the latest `mlp:review` script, ensures `package.json` exposes `npm run mlp:review`, and inserts or updates two managed CSS blocks:
    - `MLP FRAMEWORK SHELL GUARDS`: fixes workspace background isolation, four fixed workspace columns, `546px` Product Notes width, bright hard-coded shell colors (`#F5F6F8` workspace, `#FFFFFF` panels, `#F3F4F6` muted document surfaces, `#E5E7EB` borders, `#5F6670` muted text), independent project/settings rail, independent theme card, scrollable page directory body, connector overlay styling, phone shell black frame, phone theme tokens, explicit `screen--primary` / `screen--secondary` / `screen--custom` viewport sizing, and secondary status-bar/topbar alignment.
    - `MLP STRICT FRAMEWORK GUARDS`: fixes common framework drift such as unreadable theme text, broken bottom tab active states, non-tokenized template titles, login/member control contrast issues, and member hero surfaces.
-   The managed guards must also cover Theme/Guide card details, prototype state switch transparency, Product Notes embedded test-case structure, connector overlay colors, and the rule that primary tabs do not add an extra black bottom shell block.
+   The managed guards must also cover Theme/Guide card details, prototype state switch transparency, separate Product Notes/Test Cases right-panel structure, element-level Test Cases anchors, connector overlay colors, and the rule that primary tabs do not add an extra black bottom shell block.
    The shell guard is a safety net, not a substitute for structural migration. If `mlp:review` reports missing `getPageShellConfig`, `data-page-level`, `renderPhoneScreen`, screen viewport classes, `ConnectorOverlay`, or `data-interaction-id`, patch the React shell structure before handoff.
 7. Run `npm install --cache .npm-cache` only if dependencies are missing.
 8. Run `npm run mlp:review`. If it fails, patch the project until it passes; do not hand off a refreshed framework with failing review. The review includes App prototype color-token checks: phone/App selectors must not keep hard-coded color values after sync, except for theme token definitions and framework-shell exceptions.
    The review also fails when workspace, directory, state switch, Product Notes, or docs surfaces use phone theme variables such as `--app-bg`, `--surface-*`, `--text-strong`, or `--border`. These surfaces must keep fixed framework/workspace colors so switching light/dark affects only the phone prototype content.
 9. Run `npm run build`.
-10. Report:
+10. Run `npm run mlp:route-check` for normal framework refresh validation. Use `npm run mlp:acceptance` for complete non-visual acceptance. Use `npm run mlp:visual-acceptance` only when the user explicitly asks for visual review. If runtime review reports runtime exceptions, missing `.workspace`, missing `.phone`, missing `.spec-panel`, missing docs stage, empty root text, or invalid state URLs that do not fall back, fix the project before handoff.
+11. Report:
    - project path
    - changed framework areas
    - `mlp:review` result
@@ -194,9 +233,13 @@ To minimize incompatibility during framework sync:
 - Shared framework updates match the latest MLP standards.
 - `npm run mlp:review` passes after the refresh and its issues are fixed, not merely reported.
 - `npm run mlp:review` fails on protected shell drift, including Theme/Guide card styling drift, prototype state switch background drift, missing per-interaction test cases, missing connector overlay, workspace theme leakage, and any extra primary-tab bottom shell block.
+- `npm run mlp:runtime-review` passes for every page/state route. This is required because static build/review can miss runtime-only blank pages caused by missing imports, invalid state combinations, or route crashes.
+- `npm run mlp:route-check` passes before a normal framework refresh is considered complete.
+- `npm run mlp:acceptance` passes before a project is considered non-visually ready for final handoff, deployment, or full migration/rebuild completion.
+- `npm run mlp:visual-acceptance` passes only when the user explicitly requested visual review.
 - Workspace/background isolation passes: `body`, `.app-shell`, left directory, docs, state switch, and Product Notes do not use phone theme variables and do not turn black when phone dark theme is active.
 - Phone shell structure passes: the project exposes `getPageShellConfig`, `data-page-level`, `renderPhoneScreen`, `.screen--primary`, `.screen--secondary`, and a hard-coded black phone shell used only as the outer ring. Primary tabs must not add an extra black bottom shell layer.
-- Interaction connector structure passes: the project renders `ConnectorOverlay`, every `bindInteraction` source exposes `data-interaction-id`, and connector layer/path/dot CSS exists. Missing connector DOM is a refresh failure, even when hover highlighting and Product Notes scrolling work.
+- Interaction connector structure passes: the project renders `ConnectorOverlay`, every `bindInteraction` source exposes `data-interaction-id`, Product Notes and Test Cases both expose matching `interaction-<id>` anchors for the current page state, and connector layer/path/dot CSS exists. Missing connector DOM is a refresh failure, even when hover highlighting and Product Notes/Test Cases scrolling work.
 - Phone/App prototype CSS uses global color tokens. Hard-coded colors inside app page/component selectors are treated as refresh failures unless they are part of `:root`/theme definitions or documented framework-shell exceptions.
 - `npm run build` passes.
 - `dist/version.json` exists after build when update toast support is installed.

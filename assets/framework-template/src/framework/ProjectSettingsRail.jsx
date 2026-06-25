@@ -1,7 +1,7 @@
-import { BadgeCheck, Moon, Sun, WandSparkles } from 'lucide-react';
+import { BadgeCheck, ListChecks, Moon, Sun, WandSparkles } from 'lucide-react';
 import { project } from '../project/project-data.js';
 
-export default function ProjectSettingsRail({ theme, toggleTheme, interactionGuideEnabled, toggleInteractionGuide, rightPanelMode, toggleRightPanelMode }) {
+export default function ProjectSettingsRail({ theme, toggleTheme, interactionGuideEnabled, toggleInteractionGuide, rightPanelMode, toggleRightPanelMode, openCommandHelp }) {
   return (
     <aside className="project-settings-rail" aria-label="项目信息与设置">
       <div className="project-card">
@@ -62,7 +62,16 @@ export default function ProjectSettingsRail({ theme, toggleTheme, interactionGui
           </button>
         </div>
       </div>
+      <div className="theme-card command-help-card">
+        <div>
+          <span className="eyebrow">Commands</span>
+          <strong>指令查看</strong>
+        </div>
+        <button className="command-help-entry" type="button" onClick={openCommandHelp}>
+          <ListChecks size={15} />
+          <span>查看所有指令</span>
+        </button>
+      </div>
     </aside>
   );
 }
-

@@ -2,6 +2,42 @@
 
 Use these patterns when creating or updating MLP low-fidelity prototypes. Prefer these components before inventing page-specific UI.
 
+## Component API Source Of Truth
+
+The shared phone-prototype components live in:
+
+```text
+src/prototype-ui/components/index.jsx
+src/prototype-ui/patterns.css
+src/prototype-ui/tokens.css
+```
+
+New pages should import and compose these components before hand-writing equivalent markup:
+
+```jsx
+import { Button, TemplateCard, BottomSheet } from '../prototype-ui/components/index.jsx';
+```
+
+The required shared component set is:
+
+- `PhonePage`
+- `TopBar`
+- `BottomTabBar`
+- `Button`
+- `IconButton`
+- `SegmentedControl`
+- `ChipScroller`
+- `PlaceholderImage`
+- `TemplateCard`
+- `FormField`
+- `BottomSheet`
+- `Modal`
+- `Toast`
+- `EmptyState`
+- `LoadingState`
+
+These components use `mlp-*` classes and phone-scoped tokens. They must not reference `--workspace-*` variables. When a project needs a common button, image placeholder, template card, form row, sheet, modal, toast, or state card, use the component API first. Add page-specific markup only when the shared API cannot express the product need.
+
 ## General Rules
 
 - Components must use the grayscale tokens, typography scale, spacing scale, radius scale, and border rules from `visual-standard.md`.
@@ -13,7 +49,7 @@ Use these patterns when creating or updating MLP low-fidelity prototypes. Prefer
 
 ## Buttons
 
-Use the shared button classes as the default implementation:
+Use `Button` and `IconButton` as the default implementation. Legacy classes such as `.bottom-cta`, `.ghost-cta`, `.primary-btn`, `.secondary-btn`, and `.icon-btn` may remain for old pages, but new or touched pages should migrate to `Button` / `IconButton`.
 
 - Primary action: `.bottom-cta` or `.primary-btn`
   - Min height `44px`
@@ -41,7 +77,7 @@ Do not mix pill buttons and 12px-radius buttons inside the same action group. Bo
 
 ## Form Field
 
-Use a row-based form field for phone/email/code inputs:
+Use `FormField` for phone/email/code inputs. Legacy `.form-field` may remain for old pages.
 
 - Container `.form-field`
 - Height `44px` minimum
@@ -53,7 +89,7 @@ Use a row-based form field for phone/email/code inputs:
 
 ## Bottom Sheet
 
-Use bottom sheets for temporary selections, photo albums, filter choices, and confirmation details that keep the user on the current page.
+Use `BottomSheet` for temporary selections, photo albums, filter choices, and confirmation details that keep the user on the current page.
 
 - Layer: `.bottom-sheet-layer`
 - Solid overlay: `.sheet-backdrop`
@@ -112,7 +148,7 @@ Use a drawer only when the product interaction genuinely benefits from persisten
 
 ## Toast
 
-Use toast for short feedback after a tap or system event.
+Use `Toast` for short feedback after a tap or system event.
 
 - Class `.toast-message`.
 - Position inside the phone viewport near the top by default. On secondary pages, place it below the locked top title bar so it does not cover navigation.
@@ -127,7 +163,7 @@ Use toast for short feedback after a tap or system event.
 
 ## Modal Dialog
 
-Use modal dialogs for blocking confirmations, insufficient energy, payment retention, permission failures, and unrecoverable errors.
+Use `Modal` for blocking confirmations, insufficient energy, payment retention, permission failures, and unrecoverable errors.
 
 - Layer: `.modal-layer`
 - Solid overlay: `.modal-backdrop`
@@ -149,7 +185,7 @@ Product Notes must document close behavior, primary action result, secondary act
 
 ## Empty, Loading, Error
 
-Reusable state components should use:
+Use `EmptyState` and `LoadingState` for reusable state components:
 
 - Empty state: icon placeholder, short title, one helper line, optional primary action.
 - Loading state: neutral skeleton blocks or progress text; no animated decorative effects required.

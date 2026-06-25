@@ -69,18 +69,18 @@ Use this standard for mobile C-end low-fidelity prototypes.
   - `--line: 1px solid`
 - Do not use more than these grayscale tokens in the phone UI unless the user explicitly requests a new visual direction.
 - The light theme uses the same framework layout and this light grayscale token set:
-  - `--app-bg: #F5F5F2` for phone page backgrounds.
+  - `--app-bg: #F6F7F8` for phone page backgrounds.
   - `--surface-1: #FFFFFF` for primary cards, form areas, bottom tabs, and modal bodies.
-  - `--surface-2: #EFEFED` for secondary panels and weak controls.
-  - `--surface-3: #E3E3DF` for feature blocks and stronger neutral panels.
-  - `--placeholder: #B8B8B1` for image/video/template/upload placeholders.
-  - `--border: #E1E1DD` for control borders and separators.
-  - `--text-strong: #1C1C1A` for primary text.
-  - `--text-muted: #74746E` for helper text.
-  - `--text-soft: #4F4F4A` for secondary labels.
-  - Primary actions in light style use `#1C1C1A` background with `#FFFFFF` text; secondary actions use `#FFFFFF` background with `#E1E1DD` border and `#1C1C1A` text.
+  - `--surface-2: #EEF0F2` for secondary panels and weak controls.
+  - `--surface-3: #E1E4E8` for feature blocks and stronger neutral panels.
+  - `--placeholder: #B7BDC5` for image/video/template/upload placeholders.
+  - `--border: #E0E3E7` for control borders and separators.
+  - `--text-strong: #1F2328` for primary text.
+  - `--text-muted: #667085` for helper text.
+  - `--text-soft: #4B5563` for secondary labels.
+  - Primary actions in light style use `#1F2328` background with `#FFFFFF` text; secondary actions use `#FFFFFF` background with `#E0E3E7` border and `#1F2328` text.
   - `--topbar-bg: #FFFFFF` for secondary page status bar and top title bar.
-  - `--tabbar-bg: #FFFFFF`, `--tabbar-border: #E5E5E0`, `--tabbar-active-bg: #1C1C1A`, `--tabbar-active-text: #FFFFFF` for the floating bottom navigation.
+  - `--tabbar-bg: #FFFFFF`, `--tabbar-border: #E1E4E8`, `--tabbar-active-bg: #1F2328`, `--tabbar-active-text: #FFFFFF` for the floating bottom navigation.
   - Keep all other rules unchanged: no colors, no photos, no gradients, no semi-transparent effects, no dashed wireframes, and the same typography/spacing/radius scale.
 - New projects must not create additional phone color systems. If a project needs a different visual direction, ask the user explicitly before adding any third phone theme or non-grayscale accent.
 - Directory status indicators are the only default color exception: finalized/approved uses blue, adjusting/in-progress uses yellow, and update badges remain small metadata.

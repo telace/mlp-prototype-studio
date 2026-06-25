@@ -1,6 +1,4 @@
-import ComponentLibraryScreen from '../pages/ComponentLibraryScreen.jsx';
-import SampleScreen from '../pages/SampleScreen.jsx';
-import SecondaryExampleScreen from '../pages/SecondaryExampleScreen.jsx';
+import { ComponentLibraryScreen, SampleScreen, SecondaryExampleScreen } from '../pages/index.js';
 
 export function renderPhoneScreen({ page, activeState, setPage, setActiveState, setActiveInteraction }) {
   switch (page) {

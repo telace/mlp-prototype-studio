@@ -6,26 +6,43 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const mainPath = resolve(root, 'src/main.jsx');
 const stylesPath = resolve(root, 'src/styles.css');
 const srcRoot = resolve(root, 'src');
-const collectSourceFiles = (dir) => readdirSync(dir)
+const packagePath = resolve(root, 'package.json');
+const collectFiles = (dir, extensions) => readdirSync(dir)
   .flatMap((entry) => {
     const fullPath = join(dir, entry);
-    if (statSync(fullPath).isDirectory()) return collectSourceFiles(fullPath);
-    return ['.js', '.jsx'].includes(extname(fullPath)) ? [fullPath] : [];
+    if (statSync(fullPath).isDirectory()) return collectFiles(fullPath, extensions);
+    return extensions.includes(extname(fullPath)) ? [fullPath] : [];
   })
   .sort();
+const collectSourceFiles = (dir) => collectFiles(dir, ['.js', '.jsx']);
+const collectCssFiles = (dir) => collectFiles(dir, ['.css']);
 const sourceFiles = collectSourceFiles(srcRoot);
+const cssFiles = collectCssFiles(srcRoot);
 const usesLayeredArchitecture = sourceFiles.some((file) => relative(root, file) === 'src/app/App.jsx');
 const main = sourceFiles
   .map((file) => `\n/* ${relative(root, file)} */\n${readFileSync(file, 'utf8')}`)
   .join('\n');
-const styles = readFileSync(stylesPath, 'utf8');
+const styles = cssFiles
+  .map((file) => `\n/* ${relative(root, file)} */\n${readFileSync(file, 'utf8')}`)
+  .join('\n');
+const rootStyles = readFileSync(stylesPath, 'utf8');
+const pathExists = (relPath) => {
+  try {
+    statSync(resolve(root, relPath));
+    return true;
+  } catch {
+    return false;
+  }
+};
+const packageJson = pathExists('package.json') ? JSON.parse(readFileSync(packagePath, 'utf8')) : {};
+const isFrameworkTemplate = packageJson.name === 'mobile-lowfi-framework-template';
 
 const uniq = (items) => [...new Set(items)].filter(Boolean).sort();
 const countLinesBefore = (text, index) => text.slice(0, index).split('\n').length;
 
 function extractBoundIds(source) {
   const ids = [];
-  for (const match of source.matchAll(/bindInteraction\(([^)]*)\)/g)) {
+  for (const match of source.matchAll(/bind(?:Interaction|Element)\(([^)]*)\)/g)) {
     for (const id of match[1].matchAll(/['"`]([^'"`]+)['"`]/g)) {
       ids.push(id[1]);
     }
@@ -35,7 +52,7 @@ function extractBoundIds(source) {
 
 function extractDocumentedIds(source) {
   const ids = [];
-  const interactionObjectPattern = /\{[^{}]*id:\s*['"`]([^'"`]+)['"`][^{}]*title:\s*['"`][^'"`]+['"`][^{}]*(?:trigger|purpose|effect)\s*:/g;
+  const interactionObjectPattern = /\{[^{}]*id:\s*['"`]([^'"`]+)['"`][^{}]*title:\s*['"`][^'"`]+['"`][^{}]*(?:trigger|purpose|effect|dataSource|source)\s*:/g;
   for (const match of source.matchAll(interactionObjectPattern)) {
     ids.push(match[1]);
   }
@@ -157,15 +174,38 @@ function findPhoneWorkspaceTokenLeaks(css) {
   return findings;
 }
 
+const pagesRootFiles = sourceFiles
+  .map((file) => relative(root, file))
+  .filter((file) => /^src\/pages\/[^/]+\.jsx?$/.test(file));
+const allowedPagesRootFiles = new Set(['src/pages/index.js', 'src/pages/AiToolScreens.jsx']);
+const unexpectedRootPageFiles = usesLayeredArchitecture ? pagesRootFiles.filter((file) => !allowedPagesRootFiles.has(file)) : [];
+const aiToolScreensPath = resolve(root, 'src/pages/AiToolScreens.jsx');
+const aiToolScreensContent = pathExists('src/pages/AiToolScreens.jsx') ? readFileSync(aiToolScreensPath, 'utf8') : '';
+const monolithicAiToolScreens = /function\s+\w+Screen\s*\(/.test(aiToolScreensContent) || aiToolScreensContent.split('\n').length > 20;
+
+const requiredProjectDataFiles = [
+  'src/project/meta.js',
+  'src/project/directory.js',
+  'src/project/states.js',
+  'src/project/mock-data.js',
+  'src/project/routing.js',
+  'src/project/notes/index.js',
+  'src/project/notes/page-copy.js',
+  'src/project/notes/interactions.js',
+  'src/project/test-cases/index.js',
+  'src/project/project-data.js'
+];
+const missingProjectDataFiles = usesLayeredArchitecture ? requiredProjectDataFiles.filter((filePath) => !pathExists(filePath)) : [];
+
 const requiredLayeredArchitectureChecks = usesLayeredArchitecture ? [
   { label: 'layered app entry exists', source: main, snippet: 'src/app/App.jsx' },
   { label: 'layered framework phone frame exists', source: main, snippet: 'src/framework/PhoneFrame.jsx' },
   { label: 'layered framework spec panel exists', source: main, snippet: 'src/framework/SpecPanel.jsx' },
   { label: 'layered project data exists', source: main, snippet: 'src/project/project-data.js' },
   { label: 'layered project routes exists', source: main, snippet: 'src/project/routes.jsx' },
-  { label: 'layered pages exist', source: main, snippet: 'src/pages/SampleScreen.jsx' },
+  { label: 'layered pages exist', source: main, snippet: 'src/pages/' },
   { label: 'layered docs exist', source: main, snippet: 'src/docs/UIDesignChecklistPage.jsx' },
-  { label: 'prototype ui kit entry exists', source: main, snippet: 'src/prototype-ui/components/index.js' }
+  { label: 'prototype ui kit entry exists', source: main, snippet: 'src/prototype-ui/components/index.jsx' }
 ] : [];
 
 const requiredShellChecks = [
@@ -268,8 +308,9 @@ const requiredCssRules = [
   { label: 'prototype state switch hides scrollbar', snippet: '.prototype-state-switch::-webkit-scrollbar' },
   { label: 'prototype state switch chips sized to text', snippet: '.prototype-state-switch > div {\n  min-width: 100%;\n  width: max-content;' },
   { label: 'prototype state switch inner edge padding', snippet: 'padding-inline: var(--state-switch-edge-space);' },
+  { label: 'prototype state switch inner avoids edge clipping', snippet: 'justify-content: flex-start;' },
   { label: 'prototype state switch inactive chip transparent', snippet: '.prototype-state-switch button {\n  flex: 0 0 auto;\n  min-width: 0;\n  height: 30px;\n  border: 0;\n  border-radius: var(--radius-pill);\n  background: transparent;' },
-  { label: 'phone theme text inheritance guard', snippet: '.phone[data-theme] :is(h1, h2, h3, h4, p, span, strong, em, b, label, input, textarea, button)' },
+  { label: 'phone theme text inheritance guard', snippet: '.phone[data-theme] :is(h1, h2, h3, h4, p, strong, em, b, label, input, textarea)' },
   { label: 'tokenized floating tabbar', snippet: '.phone[data-theme] .tabbar' },
   { label: 'tabbar active label uses readable theme text', snippet: 'color: var(--text-strong);' },
   { label: 'tabbar icon has fixed 30px block', snippet: 'flex: 0 0 30px;' },
@@ -280,14 +321,166 @@ const requiredCssRules = [
 ];
 const missingRequiredCss = requiredCssRules.filter((rule) => !styles.includes(rule.snippet));
 
+const pagesCssPath = resolve(root, 'src/pages/styles/pages.css');
+const frameworkCssPath = resolve(root, 'src/framework/framework.css');
+const stylesLineCount = rootStyles.split('\n').length;
+const rootStylesImportsPagesCss = rootStyles.includes("@import './pages/styles/pages.css';") || rootStyles.includes('@import "./pages/styles/pages.css";');
+const rootStylesImportsFrameworkCss = rootStyles.includes("@import './framework/framework.css';") || rootStyles.includes('@import "./framework/framework.css";');
+const pageStyleSplitFailures = [
+  !pathExists('src/pages/styles/pages.css') ? '缺少 src/pages/styles/pages.css' : '',
+  !pathExists('src/framework/framework.css') ? '缺少 src/framework/framework.css 完整框架样式承载层' : '',
+  !rootStylesImportsFrameworkCss ? 'src/styles.css 未导入 src/framework/framework.css' : '',
+  !rootStylesImportsPagesCss ? 'src/styles.css 未导入页面样式文件' : '',
+  !isFrameworkTemplate && stylesLineCount > 1800 ? `src/styles.css 仍过重: ${stylesLineCount} 行` : ''
+].filter(Boolean);
+
+function findCssRule(selectorNeedle) {
+  let fallback = '';
+  for (const match of styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selector = match[1].replace(/\/\*[\s\S]*?\*\//g, '').trim();
+    const selectors = selector.split(',').map((item) => item.trim());
+    if (selectors.includes(selectorNeedle)) return match[2];
+    if (!fallback && selector.includes(selectorNeedle)) fallback = match[2];
+  }
+  return fallback;
+}
+
+const frameworkLayoutFindings = [
+  !/display:\s*grid/.test(findCssRule('.workspace')) ? '.workspace 未实际设置 display: grid' : '',
+  !/grid-template-columns:\s*var\(--workspace-settings-width\)\s+var\(--workspace-left-width\)\s+var\(--workspace-center-width\)\s+var\(--workspace-notes-width\)/.test(findCssRule('.workspace')) ? '.workspace 未使用四列固定框架宽度' : '',
+  !/height:\s*var\(--workspace-panel-height\)/.test(findCssRule('.spec-panel')) ? '.spec-panel 未使用动态固定高度' : '',
+  !/border:\s*0/.test(findCssRule('.directory-group button')) || !/background:\s*transparent/.test(findCssRule('.directory-group button')) ? '.directory-group button 可能退回浏览器默认按钮样式' : '',
+  !/display:\s*flex|display:\s*grid/.test(findCssRule('.phone-stage')) ? '.phone-stage 未声明布局，可能无法居中手机' : ''
+].filter(Boolean);
+
+function findUndefinedLocalReferences(file, text) {
+  const findings = [];
+  const imported = new Set();
+  const declared = new Set();
+  for (const match of text.matchAll(/import\s+\{([^}]+)\}\s+from/g)) {
+    for (const rawName of match[1].split(',')) {
+      const name = rawName.trim().split(/\s+as\s+/).pop()?.trim();
+      if (name) imported.add(name);
+    }
+  }
+  for (const match of text.matchAll(/import\s+([A-Za-z_$][\w$]*)\s+from/g)) imported.add(match[1]);
+  for (const match of text.matchAll(/(?:function|const|let|var)\s+([A-Za-z_$][\w$]*)/g)) declared.add(match[1]);
+  for (const hook of ['useState', 'useEffect', 'useRef', 'useMemo']) {
+    if (new RegExp(`\\b${hook}\\b`).test(text) && !imported.has(hook) && !declared.has(hook)) findings.push(`${relative(root, file)} 使用 ${hook} 但未导入/声明`);
+  }
+  const jsxNames = [...text.matchAll(/<([A-Z][A-Za-z0-9_]*)\b/g)].map((match) => match[1]);
+  const allowed = new Set(['React', 'Fragment']);
+  for (const name of uniq(jsxNames)) {
+    if (!allowed.has(name) && !imported.has(name) && !declared.has(name)) findings.push(`${relative(root, file)} JSX 组件 ${name} 未导入/声明`);
+  }
+  const functionCalls = ['getVideoStyleByState', 'getChecklistTarget', 'getStateOptions', 'getPrototypeHash'];
+  for (const name of functionCalls) {
+    if (new RegExp(`\\b${name}\\s*\\(`).test(text) && !imported.has(name) && !declared.has(name)) findings.push(`${relative(root, file)} 调用 ${name} 但未导入/声明`);
+  }
+  return findings;
+}
+
+const undefinedReferenceFindings = sourceFiles.flatMap((file) => findUndefinedLocalReferences(file, readFileSync(file, 'utf8')));
+
+const pageSourceFiles = sourceFiles.filter((file) => relative(root, file).startsWith('src/pages/') && ['.js', '.jsx'].includes(extname(file)));
+const broadImportFindings = pageSourceFiles.flatMap((file) => {
+  const text = readFileSync(file, 'utf8');
+  const findings = [];
+  for (const match of text.matchAll(/import\s+\{([^}]+)\}\s+from\s+['"]lucide-react['"]/g)) {
+    const names = match[1].split(',').map((name) => name.trim()).filter(Boolean);
+    if (names.length > 12) {
+      findings.push(`${relative(root, file)} 从 lucide-react 一次导入 ${names.length} 个图标`);
+    }
+  }
+  for (const match of text.matchAll(/import\s+\{([^}]+)\}\s+from\s+['"][^'"]*project-data\.js['"]/g)) {
+    const names = match[1].split(',').map((name) => name.trim()).filter(Boolean);
+    if (names.length > 8) {
+      findings.push(`${relative(root, file)} 从 project-data 一次导入 ${names.length} 个数据项`);
+    }
+  }
+  return findings;
+});
+
+const rawOverlayFindings = pageSourceFiles.flatMap((file) => {
+  const text = readFileSync(file, 'utf8');
+  const forbidden = [
+    'className="modal-layer"',
+    'className="prototype-modal"',
+    'className="login-modal-backdrop"',
+    'className="login-modal',
+    'className="album-backdrop"'
+  ];
+  return forbidden
+    .filter((snippet) => text.includes(snippet))
+    .map((snippet) => `${relative(root, file)} 保留旧手写弹层 ${snippet}`);
+});
+
+const legacyOverlayCssFindings = cssFiles.flatMap((file) => {
+  const rel = relative(root, file);
+  const text = readFileSync(file, 'utf8');
+  if (rel === 'src/prototype-ui/patterns.css') return [];
+  const forbiddenSelectors = [
+    '.album-backdrop',
+    '.login-modal-backdrop',
+    '.login-modal',
+    '.modal-layer',
+    '.modal-backdrop',
+    '.prototype-modal',
+    '.modal-actions'
+  ];
+  return forbiddenSelectors
+    .filter((selector) => text.includes(selector))
+    .map((selector) => `${rel} 保留旧弹层 CSS 选择器 ${selector}`);
+});
+
+const pageCssFrameworkLeakFindings = pathExists('src/pages/styles/pages.css')
+  ? (() => {
+      const text = readFileSync(pagesCssPath, 'utf8');
+      const forbidden = [
+        ['MLP FRAMEWORK SHELL GUARDS', 'src/pages/styles/pages.css 包含框架 shell guard'],
+        ['MLP STRICT FRAMEWORK GUARDS', 'src/pages/styles/pages.css 包含 strict guard'],
+        ['Latest MLP framework sync', 'src/pages/styles/pages.css 包含旧框架同步块'],
+        ['MLP connector final override', 'src/pages/styles/pages.css 包含连接线框架覆盖块']
+      ];
+      const forbiddenSelectors = [
+        '.spec-panel',
+        '.project-card',
+        '.page-directory',
+        '.checklist-stage',
+        '.ui-spec-stage',
+        '.phone {',
+        '.statusbar',
+        '.nav-bar',
+        '.screen,',
+        'body,',
+        '.app-shell',
+        '--workspace-'
+      ];
+      return [
+        ...forbidden.filter(([needle]) => text.includes(needle)).map(([, message]) => message),
+        ...forbiddenSelectors.filter((selector) => text.includes(selector)).map((selector) => `src/pages/styles/pages.css 包含框架/文档壳层选择器 ${selector}`)
+      ];
+    })()
+  : [];
+
+const prototypeUiUsageFindings = [];
+
 const requiredNotesRules = [
-  { label: 'per-interaction test case builder', source: main, snippet: 'const buildInteractionTestCases = (item, index) => {' },
+  { label: 'project test case builder module', source: main, snippet: 'src/project/test-cases/index.js' },
+  { label: 'state-specific interaction resolver', source: main, snippet: 'resolvePageStateInteractions' },
+  { label: 'current state id supports state/stateId', source: main, snippet: "ctx.state || ctx.stateId || 'default'" },
+  { label: 'per-interaction test case builder', source: main, snippet: 'export const buildInteractionTestCases = (item, index, stateNumber, ctx) => {' },
+  { label: 'test cases carry interaction id', source: main, snippet: 'interactionId: item.id' },
   { label: 'functional test case group', source: main, snippet: "group: '功能测试'" },
   { label: 'boundary test case group', source: main, snippet: "group: '边界测试'" },
   { label: 'exception test case group', source: main, snippet: "group: '异常测试'" },
   { label: 'permission test case group', source: main, snippet: "group: '权限测试'" },
   { label: 'tracking test case group', source: main, snippet: "group: '埋点测试'" },
   { label: 'test cases rendered as separate panel', source: main, snippet: '<aside className="spec-panel testcases-panel"' },
+  { label: 'test cases rendered per interaction element', source: main, snippet: 'testcase-interaction-card' },
+  { label: 'test cases reuse connector anchor ids', source: main, snippet: 'id={`interaction-${item.id}`}' },
+  { label: 'test case cards expose interaction ids', source: main, snippet: 'data-interaction-id={testCase.interactionId}' },
+  { label: 'test cases built from current state interactions', source: main, snippet: 'buildInteractionTestCases(item, index, stateNumber, ctx)' },
   { label: 'test case compact card style', source: styles, snippet: '.test-case-card.compact' }
 ];
 const missingNotesRules = requiredNotesRules.filter((rule) => !rule.source.includes(rule.snippet));
@@ -298,6 +491,18 @@ const forbiddenNotesRules = [
 ].filter((rule) => rule.source.includes(rule.snippet));
 
 const reviewSteps = [
+  {
+    name: '页面目录拆分',
+    pass: unexpectedRootPageFiles.length === 0 && !monolithicAiToolScreens && pathExists('src/pages/index.js'),
+    detail: unexpectedRootPageFiles.length || monolithicAiToolScreens || !pathExists('src/pages/index.js')
+      ? `根 pages 文件异常: ${unexpectedRootPageFiles.join(', ') || '无'}；AiToolScreens 大文件: ${monolithicAiToolScreens ? '是' : '否'}；index.js: ${pathExists('src/pages/index.js') ? '存在' : '缺失'}`
+      : 'pages 已按目录拆分，根目录仅保留 index.js 和可选兼容 barrel'
+  },
+  {
+    name: '项目数据分层',
+    pass: missingProjectDataFiles.length === 0,
+    detail: missingProjectDataFiles.length ? `缺少: ${missingProjectDataFiles.join(', ')}` : 'project 数据已按 meta/directory/states/mock-data/routing/notes/test-cases 分层'
+  },
   {
     name: '交互说明覆盖',
     pass: missingNotes.length === 0,
@@ -315,8 +520,8 @@ const reviewSteps = [
   },
   {
     name: '框架强约束',
-    pass: missingRequiredCss.length === 0,
-    detail: missingRequiredCss.length ? `缺少: ${missingRequiredCss.map((rule) => rule.label).join(', ')}` : '底部 Tab、主题文本和图标块规则已就位'
+    pass: missingRequiredCss.length === 0 && frameworkLayoutFindings.length === 0,
+    detail: missingRequiredCss.length || frameworkLayoutFindings.length ? `缺少: ${missingRequiredCss.map((rule) => rule.label).join(', ')}；布局异常: ${frameworkLayoutFindings.join('；')}` : '底部 Tab、主题文本、图标块和四栏布局规则已就位'
   },
   {
     name: 'Theme/Guide/状态切换视觉',
@@ -360,6 +565,30 @@ const reviewSteps = [
       : '测试用例已从交互说明中拆分为右侧独立面板'
   },
   {
+    name: '页面样式模块化',
+    pass: pageStyleSplitFailures.length === 0 && pageCssFrameworkLeakFindings.length === 0,
+    detail: pageStyleSplitFailures.length || pageCssFrameworkLeakFindings.length
+      ? [...pageStyleSplitFailures, ...pageCssFrameworkLeakFindings].join('；')
+      : '页面样式已拆到 src/pages/styles/pages.css，根 styles.css 保持轻量且不托管框架 guard'
+  },
+  {
+    name: '静态引用完整性',
+    pass: undefinedReferenceFindings.length === 0,
+    detail: undefinedReferenceFindings.length ? undefinedReferenceFindings.slice(0, 12).join('；') : '未发现常见缺失 import、未定义 JSX 组件或未定义 helper 调用'
+  },
+  {
+    name: '业务页组件化',
+    pass: rawOverlayFindings.length === 0 && legacyOverlayCssFindings.length === 0 && prototypeUiUsageFindings.length === 0,
+    detail: rawOverlayFindings.length || legacyOverlayCssFindings.length || prototypeUiUsageFindings.length
+      ? [...rawOverlayFindings, ...legacyOverlayCssFindings, ...prototypeUiUsageFindings].join('；')
+      : '业务页未保留旧手写 Modal/Sheet，CSS 无旧弹层残留，并按 prototype-ui 组件模式复用'
+  },
+  {
+    name: '页面导入精简',
+    pass: broadImportFindings.length === 0,
+    detail: broadImportFindings.length ? broadImportFindings.join('；') : '页面导入已按实际使用精简'
+  },
+  {
     name: 'App 配色 token 化',
     pass: hardcodedAppColors.length === 0,
     detail: hardcodedAppColors.length ? `${hardcodedAppColors.length} 处 App 原型内部硬编码色值` : '手机 App 原型内部配色已使用全局变量'
@@ -374,21 +603,21 @@ for (const [index, step] of reviewSteps.entries()) {
 if (styleWarnings.length) {
   console.log('\nWarnings:');
   for (const warning of styleWarnings) {
-    console.log(`- ${warning.label}: ${stylesPath}:${warning.line} (${warning.value})`);
+    console.log(`- ${warning.label}: src/**/*.css:${warning.line} (${warning.value})`);
   }
 }
 
 if (styleErrors.length) {
   console.log('\nStyle errors:');
   for (const error of styleErrors) {
-    console.log(`- ${error.label}: ${stylesPath}:${error.line} (${error.value})`);
+    console.log(`- ${error.label}: src/**/*.css:${error.line} (${error.value})`);
   }
 }
 
 if (hardcodedAppColors.length) {
   console.log('\nHard-coded app colors:');
   for (const item of hardcodedAppColors.slice(0, 40)) {
-    console.log(`- ${stylesPath}:${item.line} ${item.selector} (${item.value})`);
+    console.log(`- src/**/*.css:${item.line} ${item.selector} (${item.value})`);
   }
   if (hardcodedAppColors.length > 40) {
     console.log(`- ... ${hardcodedAppColors.length - 40} more`);
@@ -398,14 +627,14 @@ if (hardcodedAppColors.length) {
 if (workspaceThemeLeaks.length) {
   console.log('\nWorkspace/theme leaks:');
   for (const item of workspaceThemeLeaks.slice(0, 40)) {
-    console.log(`- ${stylesPath}:${item.line} ${item.selector} (${item.value})`);
+    console.log(`- src/**/*.css:${item.line} ${item.selector} (${item.value})`);
   }
 }
 
 if (phoneWorkspaceTokenLeaks.length) {
   console.log('\nPhone/workspace token leaks:');
   for (const item of phoneWorkspaceTokenLeaks.slice(0, 40)) {
-    console.log(`- ${stylesPath}:${item.line} ${item.selector} (${item.value})`);
+    console.log(`- src/**/*.css:${item.line} ${item.selector} (${item.value})`);
   }
 }
 
@@ -416,6 +645,35 @@ if (missingShellChecks.length) {
   }
 }
 
+if (missingProjectDataFiles.length) {
+  console.log('\nMissing project data files:');
+  for (const item of missingProjectDataFiles) {
+    console.log(`- ${item}`);
+  }
+}
+
+if (unexpectedRootPageFiles.length || monolithicAiToolScreens) {
+  console.log('\nUnexpected root page files:');
+  for (const item of unexpectedRootPageFiles) {
+    console.log(`- ${item}`);
+  }
+  if (monolithicAiToolScreens) console.log('- src/pages/AiToolScreens.jsx is still a monolithic screen file');
+}
+
+if (frameworkLayoutFindings.length) {
+  console.log('\nFramework layout findings:');
+  for (const item of frameworkLayoutFindings) {
+    console.log(`- ${item}`);
+  }
+}
+
+if (undefinedReferenceFindings.length) {
+  console.log('\nUndefined reference findings:');
+  for (const item of undefinedReferenceFindings.slice(0, 40)) {
+    console.log(`- ${item}`);
+  }
+}
+
 if (
   missingNotes.length ||
   missingSource.length ||
@@ -423,12 +681,24 @@ if (
   missingRequiredCss.length ||
   missingNotesRules.length ||
   forbiddenNotesRules.length ||
+  pageStyleSplitFailures.length ||
+  pageCssFrameworkLeakFindings.length ||
+  rawOverlayFindings.length ||
+  legacyOverlayCssFindings.length ||
+  prototypeUiUsageFindings.length ||
+  broadImportFindings.length ||
   missingShellChecks.length ||
+  missingProjectDataFiles.length ||
+  unexpectedRootPageFiles.length ||
+  monolithicAiToolScreens ||
+  !pathExists('src/pages/index.js') ||
   workspaceThemeLeaks.length ||
   phoneWorkspaceTokenLeaks.length ||
   forbiddenWorkbenchInteractions.length ||
   forbiddenLegacyShell.length ||
   forbiddenShellRules.length ||
+  frameworkLayoutFindings.length ||
+  undefinedReferenceFindings.length ||
   hardcodedAppColors.length
 ) {
   process.exitCode = 1;

@@ -7,17 +7,23 @@ description: Build reusable mobile C-end product-manager workflows from natural-
 
 Alias: `mlp`. When the user says `mlp`, treat it as this `mobile-lowfi-prototype` workflow and apply all project structure, template, preview, documentation, and deployment rules in this skill.
 
+## Context Routing
+
+For token-efficient work, start from `references/workflow-routing.md` and load only the reference needed for the current scenario. Keep `SKILL.md` as the canonical contract, but use references and scripts for detailed execution. The `mlp` shortcut skill is allowed to act as a lightweight router and read this full file only for ambiguous or framework-critical tasks.
+
+When the user omits a project path, prefer the current MLP project. Treat the current working directory as the target if it contains `package.json` and `src/project/project-data.js`. If the current directory is not an MLP project, use the most recent explicit project path only when unambiguous; otherwise ask for the project slug/path.
+
 ## Core Workflow
 
 Treat the user's requirement as the source of truth. Build iteratively:
 
 1. If the user starts a new prototype project, initialize a new isolated project from `assets/framework-template/` first. Do not design business pages in the same step unless the user explicitly provides requirements and asks to proceed.
 2. Clarify only blocking product questions; otherwise make reasonable PM assumptions.
-3. Start with layout and clickable prototype design. Before the user explicitly confirms that the overall prototype or specific pages are design-complete, do not spend tokens generating detailed product notes, PRDs, or exhaustive interaction documentation.
+3. Start with layout and clickable prototype design. Before the user explicitly confirms that the overall prototype or specific pages are design-complete, do not generate detailed product notes, PRDs, exhaustive interaction documentation, or run `npm run mlp:generate-docs`.
 4. During the design stage, focus on page structure, visual hierarchy, reusable components, navigation, and clickable flows.
-5. When the user explicitly says the whole prototype is complete, or that specific pages are complete, then generate detailed product notes for only the confirmed scope.
-6. After design confirmation, structure the confirmed scope into user flows, field rules, states, permissions, analytics, acceptance criteria, and detailed interaction notes.
-7. Verify the prototype in a real browser, including key clicks and responsive fit.
+5. When the user explicitly says the whole prototype is complete, or that specific pages are complete, then run the independent documentation draft flow for only the confirmed scope. Use `npm run mlp:generate-docs` to generate `src/project/notes/generated-draft.js`; do not treat the draft as final documentation. For a shorthand final documentation pass, use `npm run mlp:docs-complete`.
+6. After design confirmation, review the generated draft, merge approved entries into `src/project/notes/interactions.js`, fill user flows, field rules, states, permissions, analytics, acceptance criteria, and detailed element notes, then set `reviewed: true` only after editor confirmation.
+7. Verify with the command profile that matches the risk: `npm run mlp:fast-check` for ordinary page edits, `npm run mlp:route-check` for route/state changes, `npm run mlp:prototype-acceptance` for finalized prototype/content acceptance, and `npm run mlp:acceptance` for complete non-visual acceptance. Never run `mlp:visual-review`, `mlp:visual-snapshot`, or screenshot-producing checks unless the user explicitly asks for visual review.
 8. If requested, build static files and deploy to the configured Nginx site.
 
 ## Design Confirmation Gate
@@ -25,7 +31,8 @@ Treat the user's requirement as the source of truth. Build iteratively:
 Use a two-stage workflow:
 
 - **Design stage:** Build and iterate the low-fidelity prototype layout. Keep the right-side product notes minimal or placeholder-level if needed for orientation. Do not produce full PRD-style content, exhaustive field rules, analytics, or detailed exception matrices yet.
-- **Confirmed documentation stage:** Only after the user explicitly confirms that the entire prototype or named pages are complete, add detailed product notes and interaction documentation for that confirmed scope.
+- **Confirmed documentation stage:** Only after the user explicitly confirms that the entire prototype or named pages are complete, use `npm run mlp:generate-docs` to create a documentation draft, then add or merge detailed Product Notes and Test Cases for that confirmed scope.
+- `npm run mlp:generate-docs` is forbidden during the design stage unless the user explicitly asks for a documentation draft despite the prototype not being finalized.
 - The user may confirm partial completion, such as "首页完成" or "登录页完成". In that case, document only those pages and keep unfinished pages in design-stage mode.
 - If the user continues giving layout/design feedback, assume the design is not complete and continue prototype iteration without expanding documentation.
 - Do not infer completion from silence, approval of a single small change, or deployment. Wait for explicit confirmation from the user.
@@ -48,6 +55,8 @@ Each prototype must include:
 - Domestic login should default to one-tap phone authorization when requested or appropriate, with SMS verification as an alternate path inside the same domestic login flow.
 - Overseas login should use email verification and Google login when requested or appropriate.
 - Template/category selectors should switch content in place. If there are more categories than fit horizontally, implement horizontal scrolling rather than wrapping or navigating away.
+- Prototype element documentation must be granular. Use `bindInteraction(id, setActiveInteraction)` for real interactive controls and `bindElement(id, setActiveInteraction)` for non-interactive content/display elements. Buttons, tabs, upload areas, cards, list rows, cover placeholders, titles, subtitles, labels, prices, counters, badges, empty states, loading text, and every visible content field that carries product meaning should have its own stable id and matching Product Notes entry. Avoid dynamic template-string ids such as ``item-${index}``; write stable literal ids so review scripts can verify coverage.
+- Every documented element must declare `kind`: use `action` for interactive elements and `content` for display-only elements. Content elements must explain whether the value is frontend static copy, frontend config, backend API data, server-driven config, user-generated content, cache/local state, or placeholder data. Use `dataSource` for that explanation and define empty/loading/error/truncation behavior in `bounds` and `exceptions`.
 - Product notes for confirmed pages must be structured for研发和测试, not as loose prose. Use this fixed order:
   - `Product Notes`
   - `1. 页面说明`
@@ -60,6 +69,9 @@ Each prototype must include:
   - `3. 异常测试`
   - `4. 权限测试`
   - `5. 埋点测试`
+- Confirmed element documentation must be editor-reviewed before delivery. Mark each element note with `reviewed: true` only after the editor confirms the content. `npm run mlp:prototype-acceptance` must fail if any real prototype element lacks documentation, any documentation lacks a matching prototype element, any page state has no element notes, required fields are incomplete, content elements lack `dataSource`, or any element note is not reviewed.
+- Documentation generation is a separate command, not part of ordinary prototype editing. `npm run mlp:generate-docs` scans `bindInteraction` and `bindElement`, writes missing draft entries to `src/project/notes/generated-draft.js`, and leaves every generated item as `reviewed: false`. The draft file is not the delivery source of truth; reviewed entries must be copied or merged into `src/project/notes/interactions.js`.
+- `npm run mlp:docs-complete` is the quick command for finalized documentation checks. It runs draft generation, prototype documentation acceptance, and route checks. If draft entries are generated or acceptance fails, Codex must complete/merge the formal notes first, then rerun the command.
 - Do not generate a Markdown PRD by default during design iteration. Generate a PRD only when the user explicitly asks for one or confirms the relevant scope is design-complete and still wants a separate document.
 - At the end of the left-side directory, include a UI design checklist section that lists only real prototype page/state surfaces the designer needs to produce. Do not include prompt pages, appendix pages, UI spec pages, empty component library pages, or other supporting documentation pages in the UI design checklist. The UI design checklist page itself must support selecting a checklist row, showing the corresponding page/state preview on the right, and showing a compact quantity summary. The summary should count checklist rows/page states, meaning if the checklist contains 18 rows, the statistic shows 18.
 
@@ -72,6 +84,7 @@ Use this desktop review layout unless the user asks for a different container:
 - **Workspace fixed widths:** On desktop, the review workspace must use fixed column widths: project/settings rail `210px`, page directory rail `210px`, center prototype column `431px`, right Product Notes `546px`, with `20px` gaps. The total desktop workspace width is `1457px`. Do not use elastic `fr` or `minmax` widths for these four columns. Only collapse to one column at the mobile/tablet breakpoint.
 - **Small-screen workspace adaptation:** The fixed four-column desktop layout must have framework-level responsive guards. The shell must define a dynamic panel-height token such as `--workspace-panel-height: min(866px, calc(100dvh - var(--workspace-frame-y) * 2))`. On desktop and small laptops, the project/settings rail, page directory rail, and Product Notes panel use this dynamic height and scroll internally so their bottom edge keeps a fixed distance from the browser bottom. Below `1504px`, keep all four columns in one row but switch to compact fixed widths so Product Notes remains to the right of the phone instead of dropping below it. Below `1180px`, collapse the workspace to one column, make the project/settings rail and page directory full width, and keep the phone stage horizontally safe. Below `680px`, stack settings cards and directory items to one column. Below `430px`, scale the phone and state switch together. These responsive rules belong in `sync-framework-guards.mjs`, not only in project-local CSS, so old projects receive the same behavior after framework refresh.
 - **Project/settings rail:** Put project card, theme card, interaction guide card, and right-panel mode card in an independent first column named `project-settings-rail`. It should contain project name, short positioning/path, status summary when useful, the only light/dark phone theme switch, the `交互引导` switch, and the `交互说明 / 测试用例` right-panel switch. These three setting controls must use the same two-option segmented interaction style: Theme is `亮色 / 暗色`, Guide is `关闭 / 开启`, and Panel is `说明 / 用例`. Each segmented control uses a fixed two-column shell with the selected option filled; do not use a single "current value + 切换" button. Do not place project/theme/guide/right-panel switches inside the page directory column or Product Notes panel.
+- **Command help entry:** The project/settings rail must include a framework-level `指令查看` entry. It opens a workbench modal listing the common MLP operations as simple Chinese natural-language prompts and their mapped commands. This entry is framework chrome, not a phone prototype element: do not list it in Product Notes, Test Cases, UI checklist, or page interaction connectors. The command modal must include at least daily editing, route/state checks, documentation output, non-visual acceptance, explicit visual acceptance, project initialization, framework sync, rebuild from legacy, release/deploy, and version rollback prompts. Visual-review commands must be labeled explicit-only.
 - **Theme card:** Put the light/dark prototype theme switch in its own compact card inside the project/settings rail. Do not place the theme switch inside the page directory footer. Any other workbench switch in this rail, such as `交互引导`, should match this card/button style unless the user explicitly asks for a different control.
 - **Left directory:** List real pages/screens only. Group by Primary Pages, Secondary Pages, and Docs/Components when useful. Follow the directory visual and status rules in `references/visual-standard.md`. Do not list page states as independent pages.
 - **Workspace shell color:** Everything outside the phone viewport is framework content: workspace shell, project/settings rail, page directory, prototype state switch, Product Notes, UI checklist, UI spec, component docs, connector controls, and update toast. Hard-code the non-phone framework shell to a bright light scheme: workspace background `#F5F6F8`, project/theme/directory/Product Notes/docs panels `#FFFFFF`, muted document strips/cards `#F3F4F6`, borders `#E5E7EB`, primary text `#222222`, and muted text `#5F6670`. These shell colors are not phone theme tokens and must not change when switching the phone prototype between light and dark.
@@ -85,9 +98,10 @@ Use this desktop review layout unless the user asks for a different container:
 - **Framework example pages:** The base framework template must include at least one primary page example and one secondary page example. The primary example must show a locked bottom tab bar and include actions that navigate to the secondary example or open a left drawer. The secondary example must show a locked top title/back bar, must not show bottom tabs, and must include actions that trigger bottom sheet, modal/dialog, and toast component states. Drawer, sheet, modal, and toast examples must be genuinely clickable: backdrop/close/cancel controls close or return to the prior state; select/confirm controls navigate, update state, or show feedback. Do not leave any visible layer button as a no-op.
 - **Phone-level layer scrim:** On secondary pages, bottom sheet and modal/dialog scrims must cover the whole phone canvas, including the `44px` system status bar. If the layer is rendered inside `.screen` or another clipped content area and cannot physically cover the status bar, add a phone-level status-bar scrim tied to the same open state. It must use the same solid scrim token, sit above the status bar, and close or return state when tapped.
 - **Existing project framework sync:** When syncing an existing MLP project to the latest framework, preserve its business pages, page states, notes, prompts, UI checklist data, and navigation logic. Patch shell behavior, shared components, CSS variables, fixed bottom update toast, and framework-level interactions in place. If the project already has page UI, migrate page-specific colors, radii, spacing, line widths, buttons, image placeholders, bottom bars, sheets, drawers, toasts, and modals to the latest phone-scoped tokens and reusable component patterns instead of replacing the page UI with the example template. The `light` and `dark` theme switch must work on existing page UI after migration; hard-coded page colors are allowed only while intentionally converting them to variables in the same change.
-- **Framework change source of truth:** Any framework-level visual or behavioral change must update three places in the same change: `assets/framework-template/`, `scripts/sync-framework-guards.mjs`, and `assets/framework-template/scripts/mlp-loop-review.mjs`. Updating only `SKILL.md` or reference docs is not enough because old projects are refreshed through the sync script. The guard script must hard-code protected shell details such as Theme/Guide cards, prototype state switch, workspace columns, Product Notes structure, connector overlay, update toast, phone shell, and bottom tab rules; `mlp:review` must fail when those protected details drift.
+- **Framework change source of truth:** Any framework-level visual or behavioral change must update three places in the same change: `assets/framework-template/`, `scripts/sync-framework-full.mjs`, and `assets/framework-template/scripts/mlp-loop-review.mjs`. Updating only `SKILL.md` or reference docs is not enough because old projects are refreshed through the sync script. `mlp:framework-sync` means complete framework layer sync: copy `src/framework/*`, `src/prototype-ui/*`, framework review/runtime/visual scripts, `src/project/test-cases/*`, `src/framework/framework.css`, and the root style import entry from the latest template. The older `sync-framework-guards.mjs` is a patch/compatibility script only and must be exposed as `mlp:framework-patch`, not described as complete framework sync.
+- **Framework CSS layer:** Complete workbench shell styles live in `src/framework/framework.css`. Root `src/styles.css` should stay a short import entry for `prototype-ui/tokens.css`, `prototype-ui/patterns.css`, `framework/framework.css`, `project/project.css`, and `pages/styles/pages.css`. Review must allow `framework/framework.css` to be large and must fail when root `styles.css` becomes a large mixed framework/page stylesheet.
 - **Right notes:** Show Product Notes on the right. Notes must switch with both page and page state and follow the visual rules in `references/visual-standard.md`. The explicit `交互引导` switch lives in the far-left project/settings rail. When the switch is off, do not auto-scroll anchors and do not draw connector lines. When the switch is on, hovering or focusing a documented phone interaction should scroll only the notes panel to the matching block, highlight it, and draw a connector from the element to the matching Product Notes block. Anchor scrolling must affect only the notes panel, not the whole review webpage. During design iteration, keep notes lightweight; after confirmation, expand into detailed interaction docs.
-- **Product Notes and Test Cases structure:** For every confirmed page state, the right panel has two switchable views controlled from the far-left project/settings rail. `Product Notes` contains only `1. 页面说明`, `2. 页面元素清单`, `3. 交互说明`, and `4. 状态/异常矩阵`. `Test Cases` is a separate right-side view and must not be embedded inside interaction cards. Test cases should include applicable functional, boundary, exception, permission, and tracking tests. The interaction details are mainly for研发和测试 and must include: basic operation, interaction result, whether the element involves user upload/input, upload/input type and boundary, whether backend APIs are needed, whether the element is required, exception handling, data boundary, permission logic, tracking recommendation, and acceptance criteria when relevant.
+- **Product Notes and Test Cases structure:** For every confirmed page state, the right panel has two switchable views controlled from the far-left project/settings rail. `Product Notes` contains only `1. 页面说明`, `2. 页面元素清单`, `3. 交互说明`, and `4. 状态/异常矩阵`. `Test Cases` is a separate right-side view and must not be embedded inside interaction cards. Test cases must be organized by the same page interaction elements as Product Notes, not only by broad test type. Each interaction element owns its own functional, boundary, exception, permission, and tracking cases when applicable. The Test Cases card for an element must reuse the same `interaction-<id>` anchor as Product Notes so the connector overlay can highlight, scroll, and draw a line to tests exactly like it does for notes. The interaction details are mainly for研发和测试 and must include: basic operation, interaction result, whether the element involves user upload/input, upload/input type and boundary, whether backend APIs are needed, whether the element is required, exception handling, data boundary, permission logic, tracking recommendation, and acceptance criteria when relevant.
 - **Interaction connector overlay:** The connector must be a real rendered overlay component, not only hover highlighting. Keep a `ConnectorOverlay` mounted at the workbench level, bind every source element with `data-interaction-id`, and render `.interaction-connector-layer`, `.interaction-connector-path`, and `.interaction-connector-dot` elements when the `交互引导` switch is on and a source/card pair is visible. Connector colors are hard-coded framework colors, not phone tokens and not theme-dependent: path `rgba(147, 197, 253, 0.78)`, dots `rgba(147, 197, 253, 0.92)`. Framework sync/review must fail if the connector DOM, source data attributes, guide switch, or hard-coded connector colors are missing.
 - **Docs pages:** Put UI design checklist and UI specification as separate directory pages near the end. When a docs page is selected, it may replace the phone canvas instead of showing an app screen. The UI design checklist page must be interactive: each checklist row is selectable, the selected row has an obvious active state, and the right side renders the matching prototype page/state by reusing the same phone/prototype components as the main canvas. The checklist page must include a compact page quantity summary near the top, derived from the project/page/checklist data rather than hard-coded counts when possible. Do not use static screenshots, duplicated mock markup, iframe-only copies, or scaled-down previews for checklist previews. The preview must preserve the original phone/prototype ratio and size unless the user explicitly asks for a thumbnail view. Because the selected checklist row already determines the previewed state, the checklist preview must hide the prototype-only state switch above the phone. Do not add an extra title/header bar above the right-side prototype preview; the selected checklist row already identifies the page and state. Position the right-side preview vertically according to the selected checklist row so the preview visually follows the selected item, but clamp the offset to the visible viewport so the preview is not pushed below the screen.
 - **Prompt docs:** When a prototype contains reusable prompts, model prompts, parsing prompts, generation prompts, or other text assets meant for PM/algorithm/development reuse, create an independent left-directory group named `提示词` with a docs page named `提示词`. Do not hide prompt assets inside `UI规范说明` or a feature page's right-side Product Notes. The prompt page must list each prompt as its own card and provide a one-click copy button for each full prompt. When a video prototype has multiple video styles, keep a generic/no-theme prompt card first, then maintain style-specific prompt cards for the styles that need specialized parsing behavior, such as commerce/product, fashion, talking-head, story, beauty/persona, and dance. Do not delete the generic/no-theme prompt when adding style-specific prompts.
@@ -135,6 +149,10 @@ When adding or modifying UI:
 - After changes, scan CSS for off-standard colors, semi-transparent values, gradients, dashed borders, one-off font sizes/radii, and page-level styles that override standard phone page padding.
 - After every prototype UI change, inspect every affected phone page and every affected page state for standard horizontal padding. Real app pages, component library pages, and in-phone preview/demo pages must not let text, cards, buttons, lists, or component sections touch the phone edge unless the component is intentionally full-bleed, such as a system status bar, top title bar, bottom tab bar, locked bottom action area, full-screen canvas, drawer scrim, modal scrim, or media preview explicitly specified as full-bleed.
 - After every prototype UI change, run the project's loop review script when available, usually `npm run mlp:review`. The review must check that every `bindInteraction` source has a matching Product Notes interaction id, every Product Notes interaction has a source element or declared dynamic source, the CSS has no obvious low-fi violations such as dashed wireframes, gradients, blur/backdrop effects, or unsupported off-token accent colors, every phone/App prototype selector uses global phone theme tokens rather than hard-coded color values, and phone/App selectors do not reference `--workspace-*` variables. Workspace shell colors, phone outer shell hard-coded black, directory colors, Product Notes colors, status indicator colors, update toast colors, connector colors, and `:root` theme token definitions are allowed exceptions.
+- For ordinary small prototype edits, run `npm run mlp:fast-check`; for route, page-state, login-flow, directory, state-switch, or right-panel behavior changes, run `npm run mlp:route-check`. These iteration checks must not run visual review or create visual snapshots.
+- For complete non-visual acceptance, run `npm run mlp:acceptance` when available. This combines static review, build, browser-level runtime route review, and documentation acceptance, but must not run `mlp:visual-review` or create screenshots. The runtime review must open every page/state route in headless Chrome and fail on blank pages, runtime exceptions, missing `.workspace`, missing `.phone` for app pages, missing `.spec-panel` for phone pages, missing docs stage for docs pages, invalid state URLs that do not fall back to a valid route, workspace not actually using CSS grid, phone canvas outside the viewport, missing active state chip, Product Notes overlapping the phone, or missing UI checklist phone preview.
+- Visual review is explicit-only. `mlp:visual-review` must not be called from ordinary edits, acceptance, deployment preparation, handoff, migration, or rebuild unless the user directly asks for `视觉验收`, `视觉检查`, `截图验收`, `跑 visual-review`, `更新视觉基线`, or equivalent screenshot/visual evidence. When explicitly requested, use `npm run mlp:visual-acceptance` for full non-visual acceptance plus visual review, `npm run mlp:visual-review` for visual-only review, and `npm run mlp:visual-snapshot` only when screenshots are requested without pass/fail gating.
+- Runtime review must also check computed text/background contrast for direct text elements inside `.phone` in both `light` and `dark` prototype themes. Passing static token checks is not enough: if an element uses global variables but combines the wrong variables, such as light text on a light surface or inverse background with inherited normal text, runtime contrast review must fail and list the page, theme, element, and contrast ratio.
 - If the loop review fails, fix the missing interaction docs, missing connector source, or UI anomaly before handing off. Do not mark a page or state as documentation-complete until the review passes for the affected project.
 - Update the UI spec page in the prototype when a new reusable UI pattern is intentionally added.
 
@@ -161,12 +179,28 @@ src/
 │   ├── tokens.css
 │   └── patterns.css
 ├── project/
-│   ├── project-data.js
+│   ├── meta.js
+│   ├── directory.js
+│   ├── states.js
+│   ├── mock-data.js
+│   ├── routing.js
 │   ├── routes.jsx
-│   ├── directory/state/content/docs data
+│   ├── notes/
+│   │   └── index.js
+│   ├── test-cases/
+│   │   └── index.js
+│   ├── project-data.js
 │   └── project.css
 ├── pages/
-│   └── product page screens
+│   ├── index.js
+│   ├── styles/
+│   │   └── pages.css
+│   ├── home/
+│   ├── create/
+│   ├── login/
+│   ├── profile/
+│   ├── shared/
+│   └── product page screens by domain
 └── docs/
     └── UI checklist, UI spec, prompt docs
 ```
@@ -181,7 +215,92 @@ Layer responsibilities:
 
 `src/main.jsx` should stay minimal: import global CSS, render `App`, and avoid holding project data, page UI, framework components, Product Notes, or Test Cases inline.
 
+`src/project/` must use the mandatory split data structure. `project-data.js` is a compatibility barrel that only re-exports `meta.js`, `directory.js`, `states.js`, `mock-data.js`, `routing.js`, `notes/index.js`, and `test-cases/index.js`; do not put real page data, Product Notes, route helpers, or test-case builders directly back into `project-data.js`. `mlp:review` must fail when any required project data module is missing.
+
+`src/pages/` must also use domain folders. Do not keep a monolithic page file such as `AiToolScreens.jsx` with multiple screen functions. A compatibility `AiToolScreens.jsx` may exist only as a tiny barrel re-export. Real screens belong in page-domain folders such as `home/`, `create/`, `ai-video/`, `login/`, `profile/`, `member/`, `energy/`, `result/`, `templates/`, `components/`, and shared page pieces in `shared/`.
+
+`src/pages/styles/pages.css` owns page/product-specific phone UI styles. `src/styles.css` owns global imports, framework shell styles, token definitions, and managed guard blocks only. Existing projects may temporarily keep legacy page styles in `src/styles.css`, but framework sync must create/import `src/pages/styles/pages.css`, and migrated sample projects should move page-specific styles out of the root stylesheet.
+
+If an old project still has monolithic page or notes files, run:
+
+```bash
+npm run mlp:split-modules
+```
+
+The command uses the skill-level `scripts/split-project-modules.mjs` helper to split standard MLP page and notes modules, then `npm run mlp:acceptance` must pass before treating the project as fully migrated. This is non-visual unless the user explicitly asks for `mlp:visual-acceptance`.
+
+For full legacy-to-current migration, use the all-in-one migration pipeline instead of running the lower-level scripts manually:
+
+```bash
+<mobile-lowfi-prototype-skill-dir>/scripts/migrate-project-full.sh <project-slug-or-absolute-path>
+```
+
+or from a project that already has the latest scripts installed:
+
+```bash
+npm run mlp:migrate-full
+```
+
+The full migration pipeline is the standard command when the user asks to make an old MLP project match the latest final framework. It must:
+
+- Create a timestamped sibling backup before editing.
+- Run a pre-migration structural audit.
+- Sync the latest complete framework layer from the template, including `src/framework/*`, `src/prototype-ui/*`, `src/framework/framework.css`, the root style import entry, test-case builders, runtime review, visual-review command support, and strict review scripts. Do not treat partial guard patching as a successful framework sync.
+- Run semantic legacy splitting when `src/legacy/LegacyApp.jsx` exists.
+- Run page/notes module splitting for compatible monolithic modules.
+- Re-sync framework guards after splitting.
+- Audit page/module structure, CSS split, token usage, old hand-written overlays, broad imports, monolithic page files, and project data structure.
+- Treat `src/legacy/LegacyApp.jsx` as a temporary migration bridge only. A full migration must not pass while `src/legacy/LegacyApp.jsx` remains. If a legacy app shape cannot be safely split automatically, the migration must fail with a blocking report instead of handing off a compatibility-wrapped project.
+- Run `npm run mlp:acceptance`, which includes static review, build, browser-level runtime route review, contrast review, and documentation acceptance. It must not run visual review.
+- Run `npm run mlp:visual-acceptance`, `npm run mlp:visual-review`, or `npm run mlp:visual-snapshot` only when the user explicitly requests visual review, screenshots, or baseline updates. Use `node scripts/mlp-visual-review.mjs --compare` when a visual baseline exists and pixel-stability is explicitly required; use `--update-baseline` only after expected visual changes are approved.
+- Write a migration report under `.mlp/migration/reports/`.
+- Restore the project from the backup automatically if a stage fails, unless `--keep-failed` is explicitly passed.
+- Migration reports must distinguish structure migration, complete framework sync, business style migration, runtime pass, automatic visual pass, and human visual confirmation. A script report must not imply human visual approval.
+
+The full migration script may automatically rewrite only patterns it can identify safely. It must not invent business semantics or replace mature product screens with template screens. For unknown business UI that cannot be converted safely, the script must fail with a blocking report item instead of silently handing off a partially migrated project.
+
+When an old project has framework/style contamination, a very large root stylesheet, or repeated sync failures, prefer **rebuild from legacy** instead of in-place migration. Rebuild creates a clean target from the latest full framework first, then restores recognized business pages, project data, notes, prompts, docs, and page styles on top of that clean framework:
+
+```bash
+<mobile-lowfi-prototype-skill-dir>/scripts/rebuild-project-from-legacy.sh <legacy-project-slug-or-absolute-path> <new-project-slug-or-absolute-path>
+```
+
+Use `--force` only when intentionally replacing an existing target; the script backs up the existing target first. This rebuild command must:
+
+- Copy `assets/framework-template/` into the target before reading business UI.
+- Keep old framework shell CSS out of the new project.
+- Import only recognized product content and page-specific styles.
+- Fail with a report under `.mlp/rebuild/reports/` when the old project shape is not recognized.
+- Run framework sync and `npm run mlp:acceptance` before handing off, unless `--skip-verify` is explicitly passed for debugging. This handoff acceptance is non-visual by default.
+- Never treat `src/legacy/LegacyApp.jsx` as a successful final result.
+
+Use rebuild as the default answer when the user says the old migration still produces wrong shell colors, wrong phone frame behavior, un-split framework/page CSS, or old template artifacts. The expected workflow is: `旧项目 -> 新框架目标项目 -> 验收通过 -> 再决定是否替换线上/旧目录`.
+
 Framework updates must avoid touching `pages/` and `project/` unless the task is explicitly a product-content migration. Product edits must avoid touching `framework/` unless the user explicitly asks to change the MLP framework.
+
+The shared `prototype-ui` layer must include and maintain these reusable components as first-class APIs:
+
+- `PhonePage`
+- `TopBar`
+- `BottomTabBar`
+- `Button`
+- `IconButton`
+- `SegmentedControl`
+- `ChipScroller`
+- `PlaceholderImage`
+- `TemplateCard`
+- `FormField`
+- `BottomSheet`
+- `Modal`
+- `Toast`
+- `EmptyState`
+- `LoadingState`
+
+When generating or modifying product pages, prefer these components over page-specific markup for equivalent UI. Page-specific CSS may compose around them, but it should not recreate another incompatible button, form field, placeholder, sheet, modal, toast, or state component.
+
+Business screens must not hand-roll old overlay layers such as `modal-layer`, `prototype-modal`, `login-modal-backdrop`, or custom sheet backdrops when the shared `Modal` or `BottomSheet` component can represent the same interaction. If a page needs custom content inside a sheet or modal, pass that content as children/actions to the shared component and keep only product-specific inner layout classes.
+
+`mlp:review` must scan all CSS files under `src/`, not only `src/styles.css`. It must fail for hard-coded phone/App colors in page selectors, phone selectors that use `--workspace-*` variables, workspace selectors that use phone theme variables, old hand-rolled overlay classes in page JSX, missing page/style split, excessive root stylesheet weight for real projects, and broad page imports that indicate failed semantic splitting.
 
 ### Legacy Project Layered Migration
 
@@ -216,7 +335,7 @@ When editing an existing MLP project for product requirements, treat it as conte
 - Edit dynamic product content only: project copy, page directory data, page state arrays, screen components, Product Notes data, UI checklist rows, prompts, product lists/templates, and page-specific app UI inside the phone viewport.
 - Do not alter desktop workspace widths, Product Notes width, project/settings rail layout, page directory rail layout, directory scroll behavior, phone shell, theme token names, update toast behavior, connector behavior, or managed guard blocks during ordinary page/content edits.
 - If a product page needs a new shared pattern, first use existing component patterns. If the framework itself must change, update the framework template and skill references first, then sync projects through the framework refresh command instead of hand-editing each project shell.
-- After ordinary product edits, run `npm run mlp:review` and `npm run build`. If review reports framework structure or theme isolation failures, treat that as framework drift and repair through refresh/shell migration before continuing product work.
+- After ordinary product edits, run `npm run mlp:fast-check` when available, otherwise run `npm run mlp:review` and `npm run build`. Do not run `mlp:acceptance`, `mlp:visual-review`, or `mlp:visual-snapshot` for small local edits unless the user explicitly asks for visual acceptance. If review reports framework structure or theme isolation failures, treat that as framework drift and repair through refresh/shell migration before continuing product work.
 
 For framework updates across existing projects, use the one-command wrapper instead of manually copying template files:
 
@@ -321,7 +440,15 @@ For a standard existing-project framework update, prefer the one-command refresh
 <mobile-lowfi-prototype-skill-dir>/scripts/refresh-project.sh <project-slug-or-absolute-path>
 ```
 
-This command resolves the project, syncs the latest framework guards and review script, installs dependencies only when missing, runs `npm run mlp:review`, and runs `npm run build`. If the project has nonstandard React shell structure, the command must fail during review instead of silently handing off a broken refresh.
+This command resolves the project, syncs the latest framework guards and review script, installs dependencies only when missing, then runs `npm run mlp:route-check` when available, falling back to `npm run mlp:fast-check` or `npm run mlp:review && npm run build`. It does not run visual review by default. If the project has nonstandard React shell structure, the command must fail during review instead of silently handing off a broken refresh. Use `--full-acceptance` for complete non-visual acceptance, and `--visual-acceptance` only when the user explicitly asks for visual review.
+
+For a structural migration from old or mixed MLP architecture to the final layered framework, use the full migration pipeline instead:
+
+```bash
+<mobile-lowfi-prototype-skill-dir>/scripts/migrate-project-full.sh <project-slug-or-absolute-path>
+```
+
+Use `refresh-project.sh` for safe shell refreshes. Use `migrate-project-full.sh` when the project needs backup, semantic split, page split, style/token audit, runtime acceptance, report generation, and automatic rollback.
 
 ## Specified Directory Page Style Refresh
 
@@ -465,7 +592,8 @@ Product Notes field rules:
 - `页面元素清单`: list every meaningful element in the current page state. Each element has component number, name, type, purpose, required rule, backend API dependency, and display rule. Non-interactive display elements should appear here even when they do not need an interaction card.
 - `交互说明`: only for real phone UI controls. Each interaction card must include component number, component name, component type, basic operation and result, upload/input rules, backend API dependency, required rule, state feedback, exception handling, data boundary, permission logic, tracking suggestion, and acceptance criteria when relevant.
 - `状态/异常矩阵`: summarize loading, empty, error, disabled, permission, backend failure, and data-boundary states for the current page state. Do not hide these only inside a single interaction card.
-- `测试用例`: generate test cases in the separate right-side `Test Cases` view, not inside interaction element cards. Each case should have an id, associated component/state, test type, precondition when needed, steps, and expected result. Keep the test case groups as `功能测试`, `边界测试`, `异常测试`, `权限测试`, and `埋点测试`.
+- `测试用例`: generate test cases in the separate right-side `Test Cases` view, not inside Product Notes interaction cards. The Test Cases view must first group by the same current-state interaction elements and component numbers as Product Notes, then list that element's `功能测试`, `边界测试`, `异常测试`, `权限测试`, and `埋点测试` cases. Each case should have an id, associated component/state, interaction id, test type, precondition when needed, steps, and expected result.
+- `pageInteractions`: may be either a page-level array for pages with one stable element set or a state-keyed object for multi-state pages, such as `pageInteractions[pageId][stateId]`. When a page has multiple states with different visible controls, prefer the state-keyed shape. The Product Notes and Test Cases panels must resolve interactions from the current state only; do not document or test controls from other page states in the current state's panel.
 
 Common input/upload boundaries to use unless the user or product domain says otherwise:
 
@@ -512,6 +640,7 @@ During prototype iteration, default to local preview instead of cloud deployment
 - For the configured prototype server, default to SSH alias `prototype-budgit`. Do not ask again for server IP, SSH user, domain, Nginx path, or static root unless the alias fails or the user asks to use another server.
 - Cloud deployment is project-level. Deploy `<MLP_PROJECT_ROOT>/<project-slug>/` to `https://prototype.budgit.cc/<project-slug>/`; do not deploy misplaced workspace-local project folders or page/state URLs.
 - Every project build should update `public/version.json` before Vite builds. The front end should read `version.json` on load, poll it every 180 seconds with a cache-busting query string, and show the fixed bottom update toast when the remote version changes. Never auto-refresh the page.
+- Update logs are generated only for release/online handoff. Do not generate changelog entries during local preview, local deployment, routine `npm run build`, `mlp:fast-check`, or `mlp:route-check`. Before online deployment, create a release with `mlp:release`; that release writes `public/changelog.json`, includes it in `dist/`, and makes the changelog page show the latest online-ready version.
 - Page-level directory update badges are separate from the global update toast. Store viewed page versions locally with a project-scoped key such as `mlp-page-read:<project.slug>`, mapping `pageId -> updatedAt/version`. When a user opens a page, mark that page's current update key as viewed. When a page is modified in code, update that page's `updatedAt` or `version` value so returning users see the `更新` badge until they open the page.
 
 ## Project Center, Releases, And Access
@@ -523,6 +652,7 @@ MLP has a local platform metadata layer under each project:
 ├── project.json
 ├── versions.json
 ├── current.json
+├── public/changelog.json (generated by release, not local preview)
 ├── access.json
 └── releases/
     └── x.x.xx/

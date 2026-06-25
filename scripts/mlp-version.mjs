@@ -46,16 +46,6 @@ if (command === 'release') {
     process.exit(1);
   }
 
-  run('npm', ['run', 'build'], projectRoot);
-  if (!existsSync(join(projectRoot, 'dist'))) {
-    console.error('Build did not produce dist/.');
-    process.exit(1);
-  }
-
-  if (existsSync(releaseDir)) rmSync(releaseDir, { recursive: true, force: true });
-  ensureDir(releaseDir);
-  cpSync(join(projectRoot, 'dist'), join(releaseDir, 'dist'), { recursive: true });
-
   const now = new Date().toISOString();
   const versionJson = readVersions(projectRoot);
   const existing = versionJson.versions.filter((item) => item.version !== version);
@@ -72,6 +62,15 @@ if (command === 'release') {
     updatedAt: now,
     versions: [releaseMeta, ...existing].sort((a, b) => compareVersionDesc(a.version, b.version))
   };
+  writeChangelog(projectRoot, nextData);
+  run('npm', ['run', 'build'], projectRoot);
+  if (!existsSync(join(projectRoot, 'dist'))) {
+    console.error('Build did not produce dist/.');
+    process.exit(1);
+  }
+  if (existsSync(releaseDir)) rmSync(releaseDir, { recursive: true, force: true });
+  ensureDir(releaseDir);
+  cpSync(join(projectRoot, 'dist'), join(releaseDir, 'dist'), { recursive: true });
   writeVersions(projectRoot, nextData);
   writeJson(currentPath, { version, updatedAt: now, distPath: releaseMeta.distPath });
   writeJson(join(mlpDir(projectRoot), 'project.json'), {
@@ -99,6 +98,7 @@ if (command === 'rollback') {
   data.currentVersion = version;
   data.updatedAt = now;
   writeVersions(projectRoot, data);
+  writeChangelog(projectRoot, data);
   writeJson(currentPath, { version, updatedAt: now, distPath: target.distPath });
   writeJson(join(mlpDir(projectRoot), 'project.json'), {
     ...meta,
@@ -148,4 +148,17 @@ function compareVersionDesc(a, b) {
     if (pa[i] !== pb[i]) return pb[i] - pa[i];
   }
   return 0;
+}
+
+function writeChangelog(projectRoot, data) {
+  writeJson(join(projectRoot, 'public', 'changelog.json'), {
+    currentVersion: data.currentVersion,
+    updatedAt: data.updatedAt,
+    versions: data.versions.map((item) => ({
+      version: item.version,
+      title: item.title,
+      summary: item.summary || '',
+      createdAt: item.createdAt
+    }))
+  });
 }

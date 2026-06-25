@@ -9,6 +9,10 @@ export function bindInteraction(id, setActiveInteraction) {
   };
 }
 
+export function bindElement(id, setActiveInteraction) {
+  return bindInteraction(id, setActiveInteraction);
+}
+
 export function getVisibleInteractionSource(id) {
   if (typeof document === 'undefined' || !id) return null;
   const nodes = Array.from(document.querySelectorAll('[data-interaction-id]'));
@@ -18,4 +22,3 @@ export function getVisibleInteractionSource(id) {
     return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.right > 0 && rect.top < window.innerHeight && rect.left < window.innerWidth;
   }) || null;
 }
-
