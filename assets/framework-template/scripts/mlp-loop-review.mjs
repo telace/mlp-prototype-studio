@@ -7,6 +7,7 @@ const mainPath = resolve(root, 'src/main.jsx');
 const stylesPath = resolve(root, 'src/styles.css');
 const srcRoot = resolve(root, 'src');
 const packagePath = resolve(root, 'package.json');
+const viteConfigPath = resolve(root, 'vite.config.js');
 const collectFiles = (dir, extensions) => readdirSync(dir)
   .flatMap((entry) => {
     const fullPath = join(dir, entry);
@@ -35,6 +36,7 @@ const pathExists = (relPath) => {
   }
 };
 const packageJson = pathExists('package.json') ? JSON.parse(readFileSync(packagePath, 'utf8')) : {};
+const viteConfig = pathExists('vite.config.js') ? readFileSync(viteConfigPath, 'utf8') : '';
 const isFrameworkTemplate = packageJson.name === 'mobile-lowfi-framework-template';
 
 const uniq = (items) => [...new Set(items)].filter(Boolean).sort();
@@ -44,6 +46,7 @@ function extractBoundIds(source) {
   const ids = [];
   for (const match of source.matchAll(/bind(?:Interaction|Element)\(([^)]*)\)/g)) {
     for (const id of match[1].matchAll(/['"`]([^'"`]+)['"`]/g)) {
+      if (id[1].includes('${')) continue;
       ids.push(id[1]);
     }
   }
@@ -55,6 +58,14 @@ function extractDocumentedIds(source) {
   const interactionObjectPattern = /\{[^{}]*id:\s*['"`]([^'"`]+)['"`][^{}]*title:\s*['"`][^'"`]+['"`][^{}]*(?:trigger|purpose|effect|dataSource|source)\s*:/g;
   for (const match of source.matchAll(interactionObjectPattern)) {
     ids.push(match[1]);
+  }
+  for (const match of source.matchAll(/\b(?:item|content)\(\s*['"`]([^'"`]+)['"`]/g)) {
+    ids.push(match[1]);
+  }
+  for (const match of source.matchAll(/\btemplateItems\(\s*['"`]([^'"`]+)['"`]\s*,\s*(\d+)/g)) {
+    const prefix = match[1];
+    const count = Number(match[2]);
+    for (let index = 1; index <= count; index += 1) ids.push(`${prefix}-${index}`);
   }
   return uniq(ids);
 }
@@ -69,8 +80,8 @@ const dynamicSourceIds = dynamicSourceCandidates.filter((id) => {
   return main.includes(`'${id}'`) || main.includes(`"${id}"`) || main.includes(`\`${id}\``);
 });
 
-const expectedDocumentedIds = uniq([...extractBoundIds(main), ...dynamicSourceIds]);
 const documentedIds = extractDocumentedIds(main);
+const expectedDocumentedIds = uniq([...extractBoundIds(main), ...documentedIds, ...dynamicSourceIds]);
 
 const missingNotes = expectedDocumentedIds.filter((id) => !documentedIds.includes(id));
 const missingSource = documentedIds.filter((id) => !expectedDocumentedIds.includes(id));
@@ -217,7 +228,8 @@ const requiredShellChecks = [
   { label: 'secondary viewport class in React', source: main, snippet: 'screen--secondary' },
   { label: 'prototype state switch scroller ref', source: main, snippet: 'stateScrollerRef' },
   { label: 'prototype state switch active button lookup', source: main, snippet: "querySelector('button.active')" },
-  { label: 'prototype state switch centers selected chip', source: main, snippet: "scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })" },
+  { label: 'prototype state switch detects overflow', source: main, snippet: 'updateOverflowState' },
+  { label: 'prototype state switch centers selected chip', source: main, snippet: 'activeCenterOffset - scroller.clientWidth / 2' },
   { label: 'workspace background is isolated', source: styles, snippet: 'body,\n.app-shell' },
   { label: 'workspace background uses fixed light shell color', source: styles, snippet: '--workspace-bg: #F5F6F8;' },
   { label: 'directory and notes use fixed white panels', source: styles, snippet: '--workspace-panel: #FFFFFF;' },
@@ -237,13 +249,22 @@ const requiredShellChecks = [
   { label: 'narrow-screen settings rail single column', source: styles, snippet: '@media (max-width: 680px)' },
   { label: 'phone scales on very narrow screens', source: styles, snippet: '.phone,\n  .prototype-state-switch {\n    transform: scale(.92);' },
   { label: 'project settings rail exists', source: main, snippet: 'className="project-settings-rail"' },
-  { label: 'Product Notes page explanation section', source: main, snippet: '1. 页面说明' },
-  { label: 'Product Notes element inventory section', source: main, snippet: '2. 页面元素清单' },
-  { label: 'Product Notes interaction section', source: main, snippet: '3. 交互说明' },
-  { label: 'Product Notes state exception matrix', source: main, snippet: '4. 状态/异常矩阵' },
-  { label: 'right panel mode state exists', source: main, snippet: 'rightPanelMode' },
-  { label: 'right panel mode toggle lives in settings rail', source: main, snippet: 'notes-mode-toggle' },
-  { label: 'Test Cases separate right panel', source: main, snippet: "rightPanelMode === 'tests'" },
+  { label: 'Product Notes page explanation tab', source: main, snippet: "label: '页面说明'" },
+  { label: 'Product Notes element inventory section', source: main, snippet: '页面元素列表' },
+  { label: 'Product Notes interaction section', source: main, snippet: '交互说明' },
+  { label: 'Product Notes conditionally renders state handling', source: main, snippet: '空态/失败态' },
+  { label: 'Product Notes local edit button', source: main, snippet: 'className="note-edit-button"' },
+  { label: 'Product Notes local edit saves through API', source: main, snippet: "fetch('/__mlp/api/notes/update'" },
+  { label: 'Product Notes local edit keeps unsaved state', source: main, snippet: 'onDirtyChange?.(draftDirty)' },
+  { label: 'Product Notes local edit auto clears reviewed', source: viteConfig, snippet: 'reviewed: false' },
+  { label: 'Product Notes local edit API exists', source: viteConfig, snippet: "server.middlewares.use('/__mlp/api/notes/update'" },
+  { label: 'Product Notes local edit hash conflict check', source: viteConfig, snippet: "'conflict'" },
+  { label: 'Product Notes local edits file exists', source: main, snippet: "local-edits.json" },
+  { label: 'Unsaved Product Notes page switch guard', source: main, snippet: 'confirmLeaveDirtyNotes' },
+  { label: 'right panel local tab state exists', source: main, snippet: "useState('interactions')" },
+  { label: 'right panel sticky top bar exists', source: main, snippet: 'className="spec-sticky-head"' },
+  { label: 'right panel has three tabs', source: main, snippet: "id: 'overview', label: '页面说明'" },
+  { label: 'Test Cases separate right panel', source: main, snippet: "panelMode === 'tests'" },
   { label: 'Product Notes test case styling', source: styles, snippet: '.test-case-card' },
   { label: 'hard-coded black phone shell', source: styles, snippet: 'background: #050505;' },
   { label: 'primary viewport sizing class', source: styles, snippet: '.screen--primary' },
@@ -258,9 +279,12 @@ const requiredShellChecks = [
   { label: 'connector overlay rendered behind guide switch', source: main, snippet: '<ConnectorOverlay activeInteraction={interactionGuideEnabled ? activeInteraction : null}' },
   { label: 'interaction guide state exists', source: main, snippet: 'interactionGuideEnabled' },
   { label: 'interaction guide toggle lives in settings rail', source: main, snippet: 'className="theme-card guide-settings-card"' },
+  { label: 'interaction guide shortcut exists', source: main, snippet: 'handleGuideShortcut' },
+  { label: 'interaction guide shortcut key is G', source: main, snippet: "event.key.toLowerCase() !== 'g'" },
+  { label: 'interaction guide shortcut hint is visible', source: main, snippet: '<kbd>G</kbd>' },
   { label: 'settings use segmented toggle style', source: main, snippet: 'className="segmented-toggle"' },
   { label: 'interaction guide uses segmented toggle style', source: main, snippet: 'className="segmented-toggle guide-toggle"' },
-  { label: 'right-panel mode uses segmented toggle style', source: main, snippet: 'className="segmented-toggle notes-mode-toggle"' },
+  { label: 'right-panel mode uses internal tabs', source: main, snippet: 'className="right-panel-tabs"' },
   { label: 'interaction source data attribute', source: main, snippet: "'data-interaction-id': id" },
   { label: 'visible interaction source lookup', source: main, snippet: 'getVisibleInteractionSource' },
   { label: 'connector overlay CSS layer', source: styles, snippet: '.interaction-connector-layer' },
@@ -306,9 +330,9 @@ const requiredCssRules = [
   { label: 'prototype state switch has edge centering space', snippet: '--state-switch-edge-space: 150px;' },
   { label: 'prototype state switch uses scroll padding', snippet: 'scroll-padding-inline: var(--state-switch-edge-space);' },
   { label: 'prototype state switch hides scrollbar', snippet: '.prototype-state-switch::-webkit-scrollbar' },
-  { label: 'prototype state switch chips sized to text', snippet: '.prototype-state-switch > div {\n  min-width: 100%;\n  width: max-content;' },
-  { label: 'prototype state switch inner edge padding', snippet: 'padding-inline: var(--state-switch-edge-space);' },
-  { label: 'prototype state switch inner avoids edge clipping', snippet: 'justify-content: flex-start;' },
+  { label: 'prototype state switch chips sized to text', snippet: '.prototype-state-switch > div {\n  min-width: 0;\n  width: max-content;' },
+  { label: 'prototype state switch non-overflow group centers', snippet: 'margin-inline: auto;' },
+  { label: 'prototype state switch overflowing edge padding', snippet: '.prototype-state-switch.is-overflowing > div {\n  min-width: 100%;\n  padding-inline: var(--state-switch-edge-space);' },
   { label: 'prototype state switch inactive chip transparent', snippet: '.prototype-state-switch button {\n  flex: 0 0 auto;\n  min-width: 0;\n  height: 30px;\n  border: 0;\n  border-radius: var(--radius-pill);\n  background: transparent;' },
   { label: 'phone theme text inheritance guard', snippet: '.phone[data-theme] :is(h1, h2, h3, h4, p, strong, em, b, label, input, textarea)' },
   { label: 'tokenized floating tabbar', snippet: '.phone[data-theme] .tabbar' },
@@ -476,7 +500,7 @@ const requiredNotesRules = [
   { label: 'exception test case group', source: main, snippet: "group: '异常测试'" },
   { label: 'permission test case group', source: main, snippet: "group: '权限测试'" },
   { label: 'tracking test case group', source: main, snippet: "group: '埋点测试'" },
-  { label: 'test cases rendered as separate panel', source: main, snippet: '<aside className="spec-panel testcases-panel"' },
+  { label: 'test cases rendered as separate panel', source: main, snippet: "panelMode === 'tests'" },
   { label: 'test cases rendered per interaction element', source: main, snippet: 'testcase-interaction-card' },
   { label: 'test cases reuse connector anchor ids', source: main, snippet: 'id={`interaction-${item.id}`}' },
   { label: 'test case cards expose interaction ids', source: main, snippet: 'data-interaction-id={testCase.interactionId}' },

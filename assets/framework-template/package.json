@@ -26,7 +26,8 @@
     "mlp:visual-acceptance": "npm run mlp:acceptance && npm run mlp:visual-review",
     "mlp:split-modules": "node /Users/telace/.codex/skills/mobile-lowfi-prototype/scripts/split-project-modules.mjs .",
     "mlp:visual-snapshot": "node scripts/mlp-visual-review.mjs --snapshot-only",
-    "mlp:framework-patch": "node /Users/telace/.codex/skills/mobile-lowfi-prototype/scripts/sync-framework-guards.mjs ."
+    "mlp:framework-patch": "node /Users/telace/.codex/skills/mobile-lowfi-prototype/scripts/sync-framework-guards.mjs .",
+    "mlp:export-ai": "node scripts/mlp-export-ai-handoff.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.6.0",

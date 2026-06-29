@@ -337,11 +337,11 @@ For C-end mobile apps that require login, include a login page by default:
 - Use `18px` panel padding, `16px` radius, and a subtle solid border or separator. Do not use dashed dividers.
 - Header structure: small label such as `Product Notes`, then current page/state title, then concise context metadata.
 - Show page number and state number in the notes header or first section, not in the phone UI or state chips.
-- Structure detailed notes in this order: `Product Notes`, `1. 页面说明`, `2. 页面元素清单`, `3. 交互说明`, and `4. 状态/异常矩阵`. Test cases are not a separate page-level block; they are embedded inside each interaction element card as `测试用例`.
+- Structure detailed notes in this order: `Product Notes`, `1. 页面说明`, `2. 页面元素清单`, `3. 交互说明`, and `4. 状态/异常矩阵`. Test cases live in the separate right-side `测试用例` tab, not inside Product Notes interaction cards.
 - `页面元素清单` defines the page objects before interaction behavior. Each row/card should show component number, element name, element type, purpose, required rule, backend API dependency, and display rule.
-- `交互说明` is for研发和测试 and must show: basic operation, interaction result, upload/input rule and boundary, backend API dependency, required rule, feedback state, exception handling, data boundary, permission logic, tracking suggestion, and acceptance criteria when relevant.
+- `交互说明` is for研发和测试 and must use the current five-section interaction-card format: `组件基本信息` only shows component type; `组件构成` describes visible/content sub-elements; `状态定义` shows state-name tags only; `交互行为` is one narrative text block using `①②③` to describe operations and results; `数据说明` lists fields, types, and frontend/backend/user data source. State tags must reflect the actual mobile element function; do not auto-add desktop `悬停态` or generic `按下态`. Boundary, animation, and design-parameter sections are not shown as standalone fields in the current interaction-card UI.
 - `状态/异常矩阵` summarizes page-level loading, empty, error, disabled, permission, backend failure, and boundary states.
-- `测试用例` are generated from each element and interaction model. Each interaction card should include its own applicable functional, boundary, exception, permission, and tracking cases. Each test case has id, associated component/state, test type, steps, and expected result.
+- `测试用例` are generated from each element and interaction model. The Test Cases view groups cases by current-state interaction element and component number, then shows the applicable functional, boundary, exception, permission, and tracking cases. Each test case has id, associated component/state, test type, steps, and expected result. In local dev, each test case card must be edited independently.
 - Keep notes scannable: use compact cards/rows for interaction blocks, not long unstructured paragraphs.
 - Do not include prototype viewer controls in interaction blocks. Exclude the state switch above the phone, left directory navigation, theme switch, update toast, and other workbench controls from page-level Product Notes interactions.
 - Hover linkage: when hovering a phone component, highlight the corresponding note block; when hovering a note block, highlight the corresponding phone component.
@@ -387,7 +387,7 @@ For C-end mobile apps that require login, include a login page by default:
 - Do not show a leading title such as "状态"; show only the state chips.
 - Chips should size to their text content and remain centered.
 - The state switch wrapper must not have a gray or framed background. Use a transparent wrapper, transparent unselected chips, and only the active chip gets a filled selected background.
-- Do not add custom mouse-drag behavior by default. Clicking a chip switches the state and centers the selected chip in the state switch when the list overflows.
+- Do not add custom mouse-drag behavior by default. If all state chips fit, center the whole chip group. If the list overflows, clicking a chip switches the state and centers the selected chip in the state switch.
 - Page/state numbers should not be shown on the chips. Put numbers in Product Notes instead.
 - Treat this switch as prototype review UI, not shipped app UI.
 

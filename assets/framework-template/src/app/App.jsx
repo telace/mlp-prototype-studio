@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import AIHandoffModal from '../framework/AIHandoffModal.jsx';
 import CommandHelpModal from '../framework/CommandHelpModal.jsx';
 import ConnectorOverlay from '../framework/ConnectorOverlay.jsx';
 import PageDirectory from '../framework/PageDirectory.jsx';
@@ -7,9 +8,10 @@ import ProjectSettingsRail from '../framework/ProjectSettingsRail.jsx';
 import PrototypeStage from '../framework/PrototypeStage.jsx';
 import SpecPanel from '../framework/SpecPanel.jsx';
 import UpdateBanner from '../framework/UpdateBanner.jsx';
-import { getDirectoryItems, supportPageIds } from '../framework/supportPages.js';
+import { getRouteItems, supportPageIds } from '../framework/supportPages.js';
 import ChangelogPage from '../docs/ChangelogPage.jsx';
 import PromptDocsPage from '../docs/PromptDocsPage.jsx';
+import TestAcceptancePage from '../docs/TestAcceptancePage.jsx';
 import UIDesignChecklistPage from '../docs/UIDesignChecklistPage.jsx';
 import UISpecPage from '../docs/UISpecPage.jsx';
 import {
@@ -25,10 +27,11 @@ import {
 } from '../project/project-data.js';
 
 function parseRoute() {
-  if (typeof window === 'undefined') return { page: 'sample', state: 'default' };
+  const directoryItems = getRouteItems(pageDirectory);
+  const fallbackPage = directoryItems.find((item) => item.level !== 'docs')?.id || directoryItems[0]?.id || 'home';
+  if (typeof window === 'undefined') return { page: fallbackPage, state: 'default' };
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
-  const directoryItems = getDirectoryItems(pageDirectory);
-  const page = directoryItems.some((item) => item.id === parts[0]) ? parts[0] : 'sample';
+  const page = directoryItems.some((item) => item.id === parts[0]) ? parts[0] : fallbackPage;
   const options = getStateOptions(page);
   const state = options.some((item) => item.id === parts[1]) ? parts[1] : options[0]?.id || 'default';
   return { page, state };
@@ -46,8 +49,9 @@ export default function App() {
   const [activeState, setActiveState] = useState(initialRoute.state);
   const [activeInteraction, setActiveInteraction] = useState(null);
   const [interactionGuideEnabled, setInteractionGuideEnabled] = useState(false);
-  const [rightPanelMode, setRightPanelMode] = useState('notes');
   const [commandHelpOpen, setCommandHelpOpen] = useState(false);
+  const [aiHandoffOpen, setAiHandoffOpen] = useState(false);
+  const [notesDirty, setNotesDirty] = useState(false);
   const [pageReadVersions, setPageReadVersions] = useState(readPageReadVersions);
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return getProjectDefaultTheme();
@@ -55,9 +59,9 @@ export default function App() {
     if (savedTheme === 'dark' || savedTheme === 'light') return savedTheme;
     return getProjectDefaultTheme();
   });
-  const spec = pageCopy[page] || pageCopy.sample;
+  const spec = pageCopy[page] || pageCopy[pageDirectory[0]?.id] || { title: page, purpose: '未填写页面功能说明。', elements: [] };
   const ctx = { page, state: activeState };
-  const isSupportPage = supportPageIds.includes(page);
+  const isSupportPage = supportPageIds.includes(page) || pageDirectory.some((item) => item.id === page && item.level === 'docs');
 
   const toggleTheme = () => {
     setTheme((current) => {
@@ -74,6 +78,20 @@ export default function App() {
       return !current;
     });
   };
+  const confirmLeaveDirtyNotes = () => {
+    if (!notesDirty) return true;
+    return window.confirm('当前交互说明尚未保存，是否放弃修改并切换？');
+  };
+  const changePage = (nextPage) => {
+    if (!confirmLeaveDirtyNotes()) return;
+    setNotesDirty(false);
+    setPage(nextPage);
+  };
+  const changeState = (nextState) => {
+    if (!confirmLeaveDirtyNotes()) return;
+    setNotesDirty(false);
+    setActiveState(nextState);
+  };
 
   useEffect(() => {
     setActiveInteraction(null);
@@ -84,15 +102,35 @@ export default function App() {
   }, [page, activeState]);
 
   useEffect(() => {
+    const handleGuideShortcut = (event) => {
+      if (event.key.toLowerCase() !== 'g' || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      const tagName = target?.tagName?.toLowerCase();
+      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target?.isContentEditable) return;
+      event.preventDefault();
+      toggleInteractionGuide();
+    };
+    window.addEventListener('keydown', handleGuideShortcut);
+    return () => window.removeEventListener('keydown', handleGuideShortcut);
+  }, []);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     const syncFromHash = () => {
       const next = parseRoute();
+      if (notesDirty && (next.page !== page || next.state !== activeState)) {
+        if (!window.confirm('当前交互说明尚未保存，是否放弃修改并切换？')) {
+          window.history.replaceState(null, '', getRouteHash(page, activeState));
+          return;
+        }
+        setNotesDirty(false);
+      }
       setPage(next.page);
       setActiveState(next.state);
     };
     window.addEventListener('hashchange', syncFromHash);
     return () => window.removeEventListener('hashchange', syncFromHash);
-  }, []);
+  }, [activeState, notesDirty, page]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -117,21 +155,24 @@ export default function App() {
     <div className="app-shell">
       <UpdateBanner />
       <CommandHelpModal open={commandHelpOpen} onClose={() => setCommandHelpOpen(false)} />
+      <AIHandoffModal open={aiHandoffOpen} onClose={() => setAiHandoffOpen(false)} />
       <ConnectorOverlay activeInteraction={interactionGuideEnabled ? activeInteraction : null} />
       <main className="workspace">
-        <ProjectSettingsRail theme={theme} toggleTheme={toggleTheme} interactionGuideEnabled={interactionGuideEnabled} toggleInteractionGuide={toggleInteractionGuide} rightPanelMode={rightPanelMode} toggleRightPanelMode={() => setRightPanelMode((current) => current === 'notes' ? 'tests' : 'notes')} openCommandHelp={() => setCommandHelpOpen(true)} />
-        <PageDirectory active={page} setPage={setPage} pageReadVersions={pageReadVersions} />
+        <ProjectSettingsRail active={page} setPage={changePage} theme={theme} toggleTheme={toggleTheme} interactionGuideEnabled={interactionGuideEnabled} toggleInteractionGuide={toggleInteractionGuide} openCommandHelp={() => setCommandHelpOpen(true)} openAIHandoff={() => setAiHandoffOpen(true)} />
+        <PageDirectory active={page} setPage={changePage} pageReadVersions={pageReadVersions} />
         {page === 'uiChecklist' ? (
           <UIDesignChecklistPage pageReadVersions={pageReadVersions} />
         ) : page === 'uiSpec' ? (
           <UISpecPage />
+        ) : page === 'testAcceptance' ? (
+          <TestAcceptancePage />
         ) : page === 'changelog' ? (
           <ChangelogPage />
         ) : page === 'prompts' ? (
           <PromptDocsPage />
         ) : (
-          <PrototypeStage page={page} activeState={activeState} setActiveState={setActiveState} setActiveInteraction={setActiveInteraction}>
-            <PhoneFrame page={page} activeState={activeState} setPage={setPage} setActiveState={setActiveState} setActiveInteraction={setActiveInteraction} theme={theme} />
+          <PrototypeStage page={page} activeState={activeState} setActiveState={changeState} setActiveInteraction={setActiveInteraction}>
+            <PhoneFrame page={page} activeState={activeState} setPage={changePage} setActiveState={changeState} setActiveInteraction={setActiveInteraction} theme={theme} />
           </PrototypeStage>
         )}
         {!isSupportPage ? (
@@ -141,7 +182,7 @@ export default function App() {
             activeInteraction={activeInteraction}
             setActiveInteraction={setActiveInteraction}
             interactionGuideEnabled={interactionGuideEnabled}
-            rightPanelMode={rightPanelMode}
+            onDirtyChange={setNotesDirty}
           />
         ) : null}
       </main>

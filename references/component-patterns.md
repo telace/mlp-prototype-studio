@@ -43,7 +43,12 @@ These components use `mlp-*` classes and phone-scoped tokens. They must not refe
 - Components must use the grayscale tokens, typography scale, spacing scale, radius scale, and border rules from `visual-standard.md`.
 - Do not use semi-transparent overlays. For blocked layers, use a solid dark overlay area such as `#111111` or `#222222`.
 - Do not use dashed borders, gradients, blur, glow, or photo assets in low-fidelity placeholders.
+- Split prototype UI components by `复用性 + 独立性`: extract a component when a UI block appears in two or more pages/states, has complex self-contained behavior, owns independent loading/empty/error state, or can be reused by changing props/config instead of internal code.
+- Use the three-layer model: atoms are indivisible units such as buttons, inputs, icons, avatars, tags, and placeholders; molecules combine atoms into one functional block such as search bars, template/product cards, upload fields, and verification-code rows; blocks combine molecules into page regions such as top bars, banner sections, waterfall lists, bottom tabs, toolbars, drawers, sheets, and modals.
+- Do not extract one-off static copy or page-only layout when a component would require excessive props and be harder to maintain than inline markup.
+- Every reusable component must have clear input data, output events, and internal state. If the same component cannot be reused in a second page/state by changing props/config only, revise its boundary before promoting it to `prototype-ui`.
 - Every reusable component added to a real product page must have Product Notes entries for each interactive control inside it.
+- Product Notes should document both reusable component blocks and meaningful child elements. For example, a `TemplateCard` can have a card-level click interaction, while the cover image, title, video icon, price/counter, or status badge should be separate documented children when their data source, failure state, validation, or behavior matters.
 - Every visible button/control inside a reusable layer component must have a concrete prototype click result. This includes backdrop buttons, close icons, cancel buttons, row actions, select buttons, and confirm buttons. Do not ship a component example with no-op layer controls.
 - Component examples belong on the `组件库` docs page when the project will reuse them across multiple screens.
 

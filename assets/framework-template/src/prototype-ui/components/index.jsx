@@ -95,16 +95,16 @@ export function ChipScroller({ chips = [], active, onChange, className, ariaLabe
   );
 }
 
-export function PlaceholderImage({ ratio = '3:4', tone = 0, video = false, icon, className, children, ...props }) {
+export function PlaceholderImage({ ratio = '3 / 4', tone = 0, video = false, icon, className, children, ...props }) {
   return (
     <div className={cx('mlp-placeholder-image', `tone-${tone}`, className)} style={{ '--mlp-placeholder-ratio': ratio }} {...props}>
-      {video || icon ? <span className="mlp-placeholder-image__icon">{icon || '▶'}</span> : null}
+      {video || icon ? <span className={cx('mlp-placeholder-image__icon', video && !icon && 'is-video')} aria-hidden={video && !icon ? 'true' : undefined}>{icon || null}</span> : null}
       {children}
     </div>
   );
 }
 
-export function TemplateCard({ title, subtitle, selected = false, video = false, ratio = '3:4', tone = 0, onClick, className, ...props }) {
+export function TemplateCard({ title, subtitle, selected = false, video = false, ratio = '3 / 4', tone = 0, onClick, className, ...props }) {
   return (
     <button className={cx('mlp-template-card', selected && 'selected', className)} onClick={onClick} {...props}>
       <PlaceholderImage ratio={ratio} tone={tone} video={video} />

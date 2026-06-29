@@ -1,7 +1,14 @@
-import { BadgeCheck, ListChecks, Moon, Sun, WandSparkles } from 'lucide-react';
+import { Boxes, ClipboardCheck, FileText, History, ListChecks, Moon, Sun, WandSparkles } from 'lucide-react';
 import { project } from '../project/project-data.js';
+import { settingsRailPages } from './supportPages.js';
 
-export default function ProjectSettingsRail({ theme, toggleTheme, interactionGuideEnabled, toggleInteractionGuide, rightPanelMode, toggleRightPanelMode, openCommandHelp }) {
+const settingsPageIcons = {
+  components: Boxes,
+  testAcceptance: ClipboardCheck,
+  changelog: History
+};
+
+export default function ProjectSettingsRail({ active, setPage, theme, toggleTheme, interactionGuideEnabled, toggleInteractionGuide, openCommandHelp, openAIHandoff }) {
   return (
     <aside className="project-settings-rail" aria-label="项目信息与设置">
       <div className="project-card">
@@ -33,7 +40,7 @@ export default function ProjectSettingsRail({ theme, toggleTheme, interactionGui
       <div className="theme-card guide-settings-card">
         <div>
           <span className="eyebrow">Guide</span>
-          <strong>交互引导</strong>
+          <strong>交互引导 <kbd>G</kbd></strong>
         </div>
         <div className="segmented-toggle guide-toggle" role="group" aria-label="交互引导">
           <button className={!interactionGuideEnabled ? 'active' : ''} type="button" aria-pressed={!interactionGuideEnabled} onClick={() => interactionGuideEnabled && toggleInteractionGuide()}>
@@ -46,31 +53,39 @@ export default function ProjectSettingsRail({ theme, toggleTheme, interactionGui
           </button>
         </div>
       </div>
-      <div className="theme-card notes-mode-card">
+      <div className="theme-card settings-docs-card">
         <div>
-          <span className="eyebrow">Panel</span>
-          <strong>右侧面板</strong>
+          <span className="eyebrow">Content</span>
+          <strong>相关内容</strong>
         </div>
-        <div className="segmented-toggle notes-mode-toggle" role="group" aria-label="右侧面板">
-          <button className={rightPanelMode === 'notes' ? 'active' : ''} type="button" aria-pressed={rightPanelMode === 'notes'} onClick={() => rightPanelMode !== 'notes' && toggleRightPanelMode()}>
-            <BadgeCheck size={14} />
-            <span>说明</span>
+        <div className="settings-doc-list">
+          <button type="button" onClick={openCommandHelp}>
+            <ListChecks size={15} />
+            <span>
+              <strong>指令查看</strong>
+              <em>查看所有指令</em>
+            </span>
           </button>
-          <button className={rightPanelMode === 'tests' ? 'active' : ''} type="button" aria-pressed={rightPanelMode === 'tests'} onClick={() => rightPanelMode !== 'tests' && toggleRightPanelMode()}>
-            <BadgeCheck size={14} />
-            <span>用例</span>
+          <button type="button" onClick={openAIHandoff}>
+            <FileText size={15} />
+            <span>
+              <strong>获取 .md</strong>
+              <em>复制 AI 交接文档</em>
+            </span>
           </button>
+          {settingsRailPages.map((item) => {
+            const Icon = settingsPageIcons[item.id] || ListChecks;
+            return (
+              <button key={item.id} className={active === item.id ? 'active' : ''} type="button" onClick={() => setPage(item.id)}>
+                <Icon size={15} />
+                <span>
+                  <strong>{item.label}</strong>
+                  <em>{item.description}</em>
+                </span>
+              </button>
+            );
+          })}
         </div>
-      </div>
-      <div className="theme-card command-help-card">
-        <div>
-          <span className="eyebrow">Commands</span>
-          <strong>指令查看</strong>
-        </div>
-        <button className="command-help-entry" type="button" onClick={openCommandHelp}>
-          <ListChecks size={15} />
-          <span>查看所有指令</span>
-        </button>
       </div>
     </aside>
   );

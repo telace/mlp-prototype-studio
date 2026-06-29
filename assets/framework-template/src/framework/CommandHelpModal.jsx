@@ -30,6 +30,11 @@ const commandGroups = [
         note: '在页面确认完成后生成/检查 Product Notes 和 Test Cases；不跑视觉验收。'
       },
       {
+        phrase: '调用 mlp，导出当前项目给其他 AI 读取',
+        command: 'npm run mlp:export-ai',
+        note: '生成 exports/ai-handoff.md 和 public/ai-handoff.md，包含目录、布局树、交互说明和测试用例；不生成截图。'
+      },
+      {
         phrase: '调用 mlp，对当前项目执行完整非视觉验收',
         command: 'npm run mlp:acceptance',
         note: '包含构建、路由运行时、文档覆盖检查；不生成截图。'

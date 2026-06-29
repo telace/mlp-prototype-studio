@@ -1,62 +1,155 @@
-export const pageInteractions = {
-  sample: [
-    { id: 'sample-page-heading', kind: 'content', type: '页面标题组', title: '页面主标题组', purpose: '说明当前一级页面的主题。', dataSource: '前端静态文案；真实项目可改为页面配置。', bounds: '标题不超过 12 个中文字符，副标题不超过 20 个中文字符。', exceptions: '配置为空时展示默认页面名称。', reviewed: true },
-    { id: 'sample-page-eyebrow', kind: 'content', type: '辅助标签', title: '页面辅助标签', purpose: '展示页面所属模块或业务线。', dataSource: '前端静态文案。', bounds: '不超过 16 个英文字符或 8 个中文字符。', exceptions: '无业务线时隐藏。', reviewed: true },
-    { id: 'sample-open-secondary', kind: 'action', type: '按钮', title: '进入二级页面按钮', trigger: '点击', purpose: '演示一级页面进入二级任务页的导航方式。', effect: '页面切换到二级页面示例，顶部显示标题栏和返回按钮，底部导航隐藏。', dataSource: '前端路由配置。', bounds: '不提交业务数据。真实项目应替换为具体业务入口。', exceptions: '目标页面不存在时保持当前页并提示。', reviewed: true },
-    { id: 'sample-secondary-entry-title', kind: 'content', type: '按钮主文案', title: '进入二级入口标题', purpose: '说明入口指向二级页面。', dataSource: '前端静态文案。', bounds: '不超过 10 个中文字符。', exceptions: '无配置时使用默认入口标题。', reviewed: true },
-    { id: 'sample-secondary-entry-desc', kind: 'content', type: '按钮辅助文案', title: '进入二级入口说明', purpose: '补充说明二级页结构。', dataSource: '前端静态文案。', bounds: '不超过 18 个中文字符。', exceptions: '空间不足时单行截断。', reviewed: true },
-    { id: 'sample-open-drawer', kind: 'action', type: '按钮', title: '打开左侧抽屉按钮', trigger: '点击', purpose: '演示一级页面内打开左侧抽屉的方式。', effect: '切换到抽屉态，左侧抽屉覆盖当前页面内容。', dataSource: '前端状态配置。', bounds: '抽屉宽度不超过手机宽度的 78%。', exceptions: '抽屉内容过多时内部滚动。', reviewed: true },
-    { id: 'sample-drawer-entry-title', kind: 'content', type: '按钮主文案', title: '抽屉入口标题', purpose: '说明点击后打开侧边抽屉。', dataSource: '前端静态文案。', bounds: '不超过 10 个中文字符。', exceptions: '无配置时使用默认入口标题。', reviewed: true },
-    { id: 'sample-drawer-entry-desc', kind: 'content', type: '按钮辅助文案', title: '抽屉入口说明', purpose: '解释抽屉覆盖当前页面。', dataSource: '前端静态文案。', bounds: '不超过 18 个中文字符。', exceptions: '空间不足时单行截断。', reviewed: true },
-    { id: 'sample-content-section-title', kind: 'content', type: '分区标题', title: '内容区标题', purpose: '标识下方内容列表。', dataSource: '前端静态文案。', bounds: '不超过 10 个中文字符。', exceptions: '列表为空时标题可保留并展示空状态。', reviewed: true },
-    { id: 'sample-card-1', kind: 'content', type: '内容卡片', title: '内容卡片 1', purpose: '展示推荐内容条目。', dataSource: '示例为前端静态占位；真实项目通常来自推荐列表接口。', bounds: '卡片宽度随双列网格，封面比例按组件规范。', exceptions: '接口为空时不展示卡片并显示空状态。', reviewed: true },
-    { id: 'sample-card-1-cover', kind: 'content', type: '封面占位', title: '内容卡片 1 封面', purpose: '展示内容视觉封面。', dataSource: '示例为前端色块占位；真实项目来自图片 URL 字段。', bounds: '图片比例 3:4，加载失败展示占位色块。', exceptions: '图片加载失败或 URL 为空时显示默认占位。', reviewed: true },
-    { id: 'sample-card-1-title', kind: 'content', type: '卡片标题', title: '内容卡片 1 标题', purpose: '展示内容名称。', dataSource: '示例为前端静态文案；真实项目来自 title 字段。', bounds: '单行展示，超过 12 个中文字符截断。', exceptions: '标题为空时展示“未命名内容”。', reviewed: true },
-    { id: 'sample-card-2', kind: 'content', type: '内容卡片', title: '内容卡片 2', purpose: '展示推荐内容条目。', dataSource: '示例为前端静态占位；真实项目通常来自推荐列表接口。', bounds: '卡片宽度随双列网格，封面比例按组件规范。', exceptions: '接口为空时不展示卡片并显示空状态。', reviewed: true },
-    { id: 'sample-card-2-cover', kind: 'content', type: '封面占位', title: '内容卡片 2 封面', purpose: '展示内容视觉封面。', dataSource: '示例为前端色块占位；真实项目来自图片 URL 字段。', bounds: '图片比例 3:4，加载失败展示占位色块。', exceptions: '图片加载失败或 URL 为空时显示默认占位。', reviewed: true },
-    { id: 'sample-card-2-title', kind: 'content', type: '卡片标题', title: '内容卡片 2 标题', purpose: '展示内容名称。', dataSource: '示例为前端静态文案；真实项目来自 title 字段。', bounds: '单行展示，超过 12 个中文字符截断。', exceptions: '标题为空时展示“未命名内容”。', reviewed: true },
-    { id: 'sample-card-3', kind: 'content', type: '内容卡片', title: '内容卡片 3', purpose: '展示推荐内容条目。', dataSource: '示例为前端静态占位；真实项目通常来自推荐列表接口。', bounds: '卡片宽度随双列网格，封面比例按组件规范。', exceptions: '接口为空时不展示卡片并显示空状态。', reviewed: true },
-    { id: 'sample-card-3-cover', kind: 'content', type: '封面占位', title: '内容卡片 3 封面', purpose: '展示内容视觉封面。', dataSource: '示例为前端色块占位；真实项目来自图片 URL 字段。', bounds: '图片比例 3:4，加载失败展示占位色块。', exceptions: '图片加载失败或 URL 为空时显示默认占位。', reviewed: true },
-    { id: 'sample-card-3-title', kind: 'content', type: '卡片标题', title: '内容卡片 3 标题', purpose: '展示内容名称。', dataSource: '示例为前端静态文案；真实项目来自 title 字段。', bounds: '单行展示，超过 12 个中文字符截断。', exceptions: '标题为空时展示“未命名内容”。', reviewed: true },
-    { id: 'sample-card-4', kind: 'content', type: '内容卡片', title: '内容卡片 4', purpose: '展示推荐内容条目。', dataSource: '示例为前端静态占位；真实项目通常来自推荐列表接口。', bounds: '卡片宽度随双列网格，封面比例按组件规范。', exceptions: '接口为空时不展示卡片并显示空状态。', reviewed: true },
-    { id: 'sample-card-4-cover', kind: 'content', type: '封面占位', title: '内容卡片 4 封面', purpose: '展示内容视觉封面。', dataSource: '示例为前端色块占位；真实项目来自图片 URL 字段。', bounds: '图片比例 3:4，加载失败展示占位色块。', exceptions: '图片加载失败或 URL 为空时显示默认占位。', reviewed: true },
-    { id: 'sample-card-4-title', kind: 'content', type: '卡片标题', title: '内容卡片 4 标题', purpose: '展示内容名称。', dataSource: '示例为前端静态文案；真实项目来自 title 字段。', bounds: '单行展示，超过 12 个中文字符截断。', exceptions: '标题为空时展示“未命名内容”。', reviewed: true },
-    { id: 'sample-tabs', kind: 'action', type: '底部导航', title: '锁底底部导航', trigger: '点击', purpose: '演示一级页面底部导航锁底。', effect: '当前示例保持在一级页面；真实项目可切换一级 Tab。', dataSource: '前端导航配置。', bounds: '一级页面才显示底部导航。', exceptions: '二级页面不得显示底部导航。', reviewed: true },
-    { id: 'sample-drawer', kind: 'action', type: '抽屉层', title: '左侧抽屉', trigger: '点击 / 关闭', purpose: '展示菜单、筛选或分层导航的抽屉模式。', effect: '点击遮罩或关闭按钮回到一级页默认态；点击菜单入口或帮助说明进入二级页面；点击筛选条件关闭抽屉并停留在一级页面。', dataSource: '示例为前端静态菜单；真实项目可来自菜单配置接口。', bounds: '使用统一抽屉宽度、间距、圆角和描边变量。', exceptions: '无结果、权限不足、加载失败时需要补充状态。', reviewed: true }
+import localNoteEdits from './local-edits.json' with { type: 'json' };
+
+const item = (id, type, title, effect, extra = {}) => ({
+  id,
+  type,
+  title,
+  effect,
+  kind: extra.kind || 'action',
+  dataSource: extra.dataSource || '前端页面配置；真实项目按接口字段替换。',
+  composition: extra.composition,
+  states: extra.states,
+  fields: extra.fields,
+  input: extra.input,
+  bounds: extra.bounds,
+  required: extra.required,
+  exceptions: extra.exceptions,
+  reviewed: false
+});
+
+const content = (id, type, title, dataSource, extra = {}) => item(id, type, title, '① 页面渲染或数据刷新时，按数据来源展示对应内容。', {
+  ...extra,
+  kind: 'content',
+  dataSource
+});
+
+const templateItems = (prefix, count, titlePrefix = '模板卡片') => Array.from({ length: count }, (_, index) => item(
+  `${prefix}-${index + 1}`,
+  '模板卡片',
+  `${titlePrefix} ${index + 1}`,
+  '① 点击卡片后选中该模板或进入制作页；② 卡片需要展示封面和标题，视频模板展示播放标识。',
+  {
+    states: '默认态、选中态、加载失败态、空数据态',
+    dataSource: '模板列表接口返回：id、title、coverUrl、type。',
+    fields: [['id', 'string，模板 ID，后端返回'], ['title', 'string，模板名称，后端返回'], ['coverUrl', 'string，封面地址，后端返回'], ['type', 'video/image，后端返回']]
+  }
+));
+
+export const basePageInteractions = {
+  home: [
+    content('home-hero', '标题区', '首页标题区', '前端页面配置。', { composition: '辅助标签 + 页面标题 + 会员入口。' }),
+    item('home-member-entry', '按钮', '会员入口', '① 点击进入会员购买页；② 默认展示 Android 购买流程。', { states: '默认态、禁用态' }),
+    item('home-ai-video-entry', '功能入口卡片', 'AI 视频入口', '① 点击进入 AI 视频生成页；② 页面显示上传区、模板案例和提示词输入。', { states: '默认态、禁用态' }),
+    item('home-works-entry', '功能入口卡片', '作品入口', '① 点击进入作品列表；② 展示用户全部作品。'),
+    item('home-credits-entry', '功能入口卡片', '积分入口', '① 点击进入积分中心；② 展示余额、套餐和历史记录。'),
+    item('home-profile-entry', '功能入口卡片', '个人中心入口', '① 点击切换到底部 Tab 的我的页面。'),
+    item('home-activity-banner', '活动 Banner', '首页活动 Banner', '① 点击进入活动或套餐页；② 如果活动已结束，展示默认积分包。', { dataSource: '运营活动接口返回标题、副标题、跳转目标。', fields: [['title', 'string，活动标题'], ['subtitle', 'string，活动说明'], ['target', 'string，跳转页面']] }),
+    item('home-create-more', '按钮', '去制作按钮', '① 点击进入 AI 视频生成页。'),
+    item('home-template-groups', '横向标签切换', '推荐分组', '① 横向滑动查看更多分组；② 点击分组后刷新下方推荐流，不跳转页面。', { states: '默认态、选中态、加载态' }),
+    content('home-template-feed', '双列列表', '推荐模板列表', '推荐列表接口返回。', { composition: '模板列表容器 + 模板封面 + 模板标题。', states: '加载态、空数据态、加载失败态' }),
+    ...templateItems('home-template', 6, '首页推荐模板'),
+    item('home-recent-more', '文本按钮', '最近作品查看更多', '① 点击进入作品列表页。'),
+    ...templateItems('home-recent', 3, '最近作品'),
+    item('home-upload-shortcut', '上传入口', '快速上传入口', '① 点击进入 AI 视频生成页并准备上传参考图。', { states: '默认态、禁用态' }),
+    item('global-tabs', '底部导航', '底部 Tab', '① 点击首页/作品/我的切换一级页面；② 一级页面底部导航锁底；③ 二级页面隐藏底部导航。', { states: '默认态、选中态' })
   ],
-  secondaryExample: [
-    { id: 'secondary-back', kind: 'action', type: '顶部返回按钮', title: '顶部返回按钮', trigger: '点击', purpose: '二级页面返回上一级页面。', effect: '返回一级页面示例，并重置到默认态。', dataSource: '前端路由配置。', bounds: '不提交业务数据。', exceptions: '存在未保存内容时真实项目应增加确认弹窗。', reviewed: true },
-    { id: 'secondary-intro-card', kind: 'content', type: '说明卡片', title: '二级页说明卡片', purpose: '展示当前页面结构说明。', dataSource: '前端静态文案；真实项目可由页面配置下发。', bounds: '卡片内标题、说明必须在固定内边距中展示。', exceptions: '配置为空时隐藏说明卡。', reviewed: true },
-    { id: 'secondary-intro-eyebrow', kind: 'content', type: '辅助标签', title: '二级页辅助标签', purpose: '标识二级页面类型。', dataSource: '前端静态文案。', bounds: '不超过 18 个英文字符或 8 个中文字符。', exceptions: '无标签时隐藏。', reviewed: true },
-    { id: 'secondary-intro-title', kind: 'content', type: '说明卡标题', title: '二级页说明标题', purpose: '突出二级页面结构重点。', dataSource: '前端静态文案。', bounds: '不超过 12 个中文字符。', exceptions: '为空时使用页面标题。', reviewed: true },
-    { id: 'secondary-intro-desc', kind: 'content', type: '说明文本', title: '二级页说明正文', purpose: '解释二级页面没有底部导航且顶部锁定。', dataSource: '前端静态文案。', bounds: '不超过 40 个中文字符，超过换行。', exceptions: '为空时不展示正文。', reviewed: true },
-    { id: 'secondary-open-sheet', kind: 'action', type: '按钮', title: '打开 Sheet 按钮', trigger: '点击', purpose: '演示二级页面触发底部 Sheet。', effect: '切换到 Sheet 态，底部面板展示来源选择。', dataSource: '前端状态配置。', bounds: 'Sheet 内容超出 70% 高度时内部滚动。', exceptions: '数据为空或权限拒绝时展示空/错状态。', reviewed: true },
-    { id: 'secondary-sheet-button-title', kind: 'content', type: '按钮主文案', title: 'Sheet 按钮标题', purpose: '说明按钮会打开底部面板。', dataSource: '前端静态文案。', bounds: '不超过 8 个中文字符。', exceptions: '为空时使用默认标题。', reviewed: true },
-    { id: 'secondary-sheet-button-desc', kind: 'content', type: '按钮辅助文案', title: 'Sheet 按钮说明', purpose: '补充说明底部弹出选择面板。', dataSource: '前端静态文案。', bounds: '不超过 14 个中文字符。', exceptions: '空间不足时单行截断。', reviewed: true },
-    { id: 'secondary-open-modal', kind: 'action', type: '按钮', title: '打开弹窗按钮', trigger: '点击', purpose: '演示二级页面触发阻断确认弹窗。', effect: '切换到弹窗态，居中弹窗显示主次操作。', dataSource: '前端状态配置。', bounds: '弹窗主操作不超过 1 个，次操作不超过 1 个。', exceptions: '失败、权限不足、能量不足等场景应提供恢复动作。', reviewed: true },
-    { id: 'secondary-modal-button-title', kind: 'content', type: '按钮主文案', title: '弹窗按钮标题', purpose: '说明按钮会打开确认弹窗。', dataSource: '前端静态文案。', bounds: '不超过 8 个中文字符。', exceptions: '为空时使用默认标题。', reviewed: true },
-    { id: 'secondary-modal-button-desc', kind: 'content', type: '按钮辅助文案', title: '弹窗按钮说明', purpose: '补充说明弹窗为居中阻断确认。', dataSource: '前端静态文案。', bounds: '不超过 14 个中文字符。', exceptions: '空间不足时单行截断。', reviewed: true },
-    { id: 'secondary-open-toast', kind: 'action', type: '按钮', title: '显示 Toast 按钮', trigger: '点击', purpose: '演示二级页面触发短反馈。', effect: '切换到 Toast 态，页面顶部显示短反馈提示。', dataSource: '前端状态配置。', bounds: '真实产品中 Toast 通常 2-3 秒自动消失。', exceptions: 'Toast 不承载复杂错误说明，复杂错误应使用弹窗或状态页。', reviewed: true },
-    { id: 'secondary-toast-button-title', kind: 'content', type: '按钮主文案', title: 'Toast 按钮标题', purpose: '说明按钮会显示短反馈。', dataSource: '前端静态文案。', bounds: '不超过 8 个中文字符。', exceptions: '为空时使用默认标题。', reviewed: true },
-    { id: 'secondary-toast-button-desc', kind: 'content', type: '按钮辅助文案', title: 'Toast 按钮说明', purpose: '补充说明 Toast 为短反馈提示。', dataSource: '前端静态文案。', bounds: '不超过 14 个中文字符。', exceptions: '空间不足时单行截断。', reviewed: true },
-    { id: 'secondary-list-section-title', kind: 'content', type: '分区标题', title: '二级页列表标题', purpose: '标识下方二级页内容列表。', dataSource: '前端静态文案。', bounds: '不超过 10 个中文字符。', exceptions: '列表为空时标题可保留并展示空状态。', reviewed: true },
-    { id: 'secondary-list-row-1', kind: 'content', type: '列表行', title: '二级页列表行 1', purpose: '展示二级页面内容条目。', dataSource: '示例为前端静态占位；真实项目通常来自列表接口。', bounds: '列表行高度固定，内容超出时文本截断。', exceptions: '接口为空时展示空状态。', reviewed: true },
-    { id: 'secondary-list-row-1-thumb', kind: 'content', type: '缩略占位', title: '列表行 1 缩略图', purpose: '展示列表条目的视觉占位。', dataSource: '示例为前端色块；真实项目来自 thumbnail 字段。', bounds: '固定 1:1 比例。', exceptions: '图片为空或失败时显示默认占位。', reviewed: true },
-    { id: 'secondary-list-row-1-title', kind: 'content', type: '列表主标题', title: '列表行 1 标题', purpose: '展示列表条目名称。', dataSource: '示例为前端静态文案；真实项目来自 title 字段。', bounds: '单行展示，超出截断。', exceptions: '标题为空时展示“未命名”。', reviewed: true },
-    { id: 'secondary-list-row-1-desc', kind: 'content', type: '列表副标题', title: '列表行 1 说明', purpose: '展示列表条目说明。', dataSource: '示例为前端静态文案；真实项目来自 description 字段。', bounds: '单行展示，超出截断。', exceptions: '说明为空时隐藏。', reviewed: true },
-    { id: 'secondary-list-row-2', kind: 'content', type: '列表行', title: '二级页列表行 2', purpose: '展示二级页面内容条目。', dataSource: '示例为前端静态占位；真实项目通常来自列表接口。', bounds: '列表行高度固定，内容超出时文本截断。', exceptions: '接口为空时展示空状态。', reviewed: true },
-    { id: 'secondary-list-row-2-thumb', kind: 'content', type: '缩略占位', title: '列表行 2 缩略图', purpose: '展示列表条目的视觉占位。', dataSource: '示例为前端色块；真实项目来自 thumbnail 字段。', bounds: '固定 1:1 比例。', exceptions: '图片为空或失败时显示默认占位。', reviewed: true },
-    { id: 'secondary-list-row-2-title', kind: 'content', type: '列表主标题', title: '列表行 2 标题', purpose: '展示列表条目名称。', dataSource: '示例为前端静态文案；真实项目来自 title 字段。', bounds: '单行展示，超出截断。', exceptions: '标题为空时展示“未命名”。', reviewed: true },
-    { id: 'secondary-list-row-2-desc', kind: 'content', type: '列表副标题', title: '列表行 2 说明', purpose: '展示列表条目说明。', dataSource: '示例为前端静态文案；真实项目来自 description 字段。', bounds: '单行展示，超出截断。', exceptions: '说明为空时隐藏。', reviewed: true },
-    { id: 'secondary-list-row-3', kind: 'content', type: '列表行', title: '二级页列表行 3', purpose: '展示二级页面内容条目。', dataSource: '示例为前端静态占位；真实项目通常来自列表接口。', bounds: '列表行高度固定，内容超出时文本截断。', exceptions: '接口为空时展示空状态。', reviewed: true },
-    { id: 'secondary-list-row-3-thumb', kind: 'content', type: '缩略占位', title: '列表行 3 缩略图', purpose: '展示列表条目的视觉占位。', dataSource: '示例为前端色块；真实项目来自 thumbnail 字段。', bounds: '固定 1:1 比例。', exceptions: '图片为空或失败时显示默认占位。', reviewed: true },
-    { id: 'secondary-list-row-3-title', kind: 'content', type: '列表主标题', title: '列表行 3 标题', purpose: '展示列表条目名称。', dataSource: '示例为前端静态文案；真实项目来自 title 字段。', bounds: '单行展示，超出截断。', exceptions: '标题为空时展示“未命名”。', reviewed: true },
-    { id: 'secondary-list-row-3-desc', kind: 'content', type: '列表副标题', title: '列表行 3 说明', purpose: '展示列表条目说明。', dataSource: '示例为前端静态文案；真实项目来自 description 字段。', bounds: '单行展示，超出截断。', exceptions: '说明为空时隐藏。', reviewed: true },
-    { id: 'secondary-sheet', kind: 'action', type: '底部 Sheet', title: '底部 Sheet', trigger: '选择 / 关闭', purpose: '承载临时选择、相册来源、筛选或补充操作。', effect: '点击遮罩关闭 Sheet 回到默认态；点击相册、拍照、历史素材会关闭 Sheet 并切换到顶部 Toast 反馈。', dataSource: '示例为前端静态选项；真实项目可来自操作配置。', bounds: 'Sheet 遮罩覆盖完整手机画布，包含手机状态栏；使用统一 Sheet 圆角、边距、描边和按钮规范。', exceptions: '相册权限拒绝、素材为空、加载失败时需要补充状态。', reviewed: true },
-    { id: 'secondary-modal', kind: 'action', type: '确认弹窗', title: '确认弹窗', trigger: '确认 / 取消', purpose: '承载阻断确认、失败提示、能量不足或支付挽留。', effect: '点击遮罩或取消按钮关闭弹窗回到默认态；点击确认按钮关闭弹窗并切换到顶部 Toast 反馈。', dataSource: '示例为前端静态文案；真实项目可由错误码或业务状态下发。', bounds: '弹窗遮罩覆盖完整手机画布，包含手机状态栏；弹窗宽度和按钮样式使用全局变量。', exceptions: '网络异常或支付失败时提供恢复路径。', reviewed: true },
-    { id: 'secondary-toast', kind: 'action', type: 'Toast', title: 'Toast 提示', trigger: '系统反馈', purpose: '承载保存成功、复制成功等轻量反馈。', effect: '真实产品中自动消失；示例中作为状态展示。', dataSource: '前端根据操作结果生成；真实项目也可根据接口返回消息映射。', bounds: '文案应短，不放操作按钮。', exceptions: '复杂错误不得用 Toast 替代。', reviewed: true }
+  works: {
+    default: [
+      content('works-title', '标题区', '作品列表标题区', '前端页面配置。'),
+      item('works-search', '按钮', '作品搜索入口', '① 点击后进入搜索或打开搜索输入；② 空关键词不触发查询。', { states: '默认态、禁用态' }),
+      item('works-tabs', '分段控制', '作品类型切换', '① 点击全部/视频/草稿切换列表筛选；② 保持当前页面不跳转。', { states: '默认态、选中态' }),
+      content('works-list', '双列作品列表', '作品列表', '作品列表接口返回。', { states: '加载态、空数据态、加载失败态', fields: [['items', 'array，作品列表，后端返回'], ['status', 'generating/success/failed，后端返回']] }),
+      ...templateItems('works-card', 6, '作品卡片')
+    ],
+    empty: [
+      item('works-search', '按钮', '作品搜索入口', '① 空状态下点击搜索仍可进入搜索；② 没有结果时继续显示空状态。'),
+      item('works-tabs', '分段控制', '作品类型切换', '① 切换筛选类型；② 当前类型无数据时展示空作品状态。')
+    ]
+  },
+  profile: [
+    item('profile-settings', '按钮', '设置入口', '① 点击进入设置页或设置面板；② 设置页包含账号、协议、客服和隐私入口。'),
+    item('profile-user-card', '用户信息卡片', '头像昵称区域', '① 点击头像或登录文案可触发登录流程；② 已登录时展示头像、昵称和用户 ID。', { dataSource: '用户信息接口返回头像、昵称、用户 ID、登录状态。', states: '已登录、未登录、加载失败态' }),
+    item('profile-copy-id', '按钮', '复制用户 ID', '① 点击复制用户 ID；② 成功后展示 Toast。', { states: '默认态、加载态、禁用态' }),
+    item('profile-member-card', '会员卡片', '会员中心入口', '① 点击进入会员购买页；② 非会员展示付费引导，会员展示权益入口。', { dataSource: '会员权益接口返回会员状态和权益摘要。' }),
+    item('profile-credits-entry', '功能入口卡片', '积分中心入口', '① 点击进入积分中心。'),
+    item('profile-works-entry', '功能入口卡片', '作品列表入口', '① 点击进入作品列表。'),
+    ...templateItems('profile-work', 4, '个人中心作品')
+  ],
+  aiVideo: {
+    default: [
+      item('ai-video-style-tabs', '横向标签切换', '视频风格标签', '① 横向滑动查看更多风格；② 点击风格后更新模板案例。', { states: '默认态、选中态' }),
+      item('ai-video-upload', '图片上传', '参考图片上传区', '① 点击上传区或底部加号打开相册 Sheet；② 未上传时生成按钮触发相册选择。', { states: '默认态、上传中、上传成功、上传失败', input: '参考图片', required: '是', bounds: 'JPG/PNG/HEIC/WEBP，单图 ≤20MB，建议短边 ≥512px。' }),
+      content('ai-video-template-cases', '横向模板列表', '模板案例列表', '模板案例接口返回。', { states: '默认态、选中态、空数据态、加载失败态' }),
+      ...templateItems('ai-video-case', 6, '模板案例'),
+      item('ai-video-prompt-box', '文本域', '提示词输入框', '① 输入生成提示词；② 加号上传辅助图；③ 发送按钮发起生成。', { input: '提示词、辅助图片', required: '否', bounds: '提示词 0-200 字；辅助图片最多 1 张。' }),
+      item('ai-video-generate', '按钮', '生成按钮', '① 已上传图片时点击发起生成；② 未上传图片时先打开相册选择；③ 积分不足时展示积分不足弹窗。', { states: '默认态、加载态、禁用态' })
+    ],
+    uploaded: [
+      item('ai-video-upload', '图片上传', '已上传参考图', '① 展示已上传图片；② 点击删除按钮可移除并回到未上传状态。', { states: '上传成功、上传失败' }),
+      item('ai-video-generate', '按钮', '生成按钮', '① 点击后提交图片、模板和提示词；② 进入生成加载弹窗。', { states: '默认态、加载态、禁用态' })
+    ],
+    template: [
+      item('ai-video-style-tabs', '横向标签切换', '视频风格标签', '① 点击不同风格后仅切换模板案例，不跳转页面。'),
+      ...templateItems('ai-video-case', 6, '模板案例')
+    ],
+    album: [
+      item('ai-video-album-sheet', '底部 Sheet', '相册选择 Sheet', '① 点击图片缩略图后选中图片并回到已上传状态；② 点击遮罩关闭 Sheet。', { states: '显示态、隐藏态、加载失败态', dataSource: '系统相册授权和本地图片列表。' })
+    ],
+    loading: [
+      item('ai-video-generate', '加载弹窗', '作品生成加载弹窗', '① 展示生成进度；② 点击查看作品详情进入作品详情生成中状态。', { states: '显示态、加载态' })
+    ],
+    noCredits: [
+      item('ai-video-generate', '弹窗', '积分不足弹窗', '① 积分不足时阻断生成；② 点击去充值进入积分中心。', { states: '显示态、隐藏态' })
+    ]
+  },
+  workDetail: [
+    content('work-detail-preview', '作品预览', '作品预览区域', '作品详情接口返回视频 URL、封面和生成状态。', { states: '生成中、播放态、失败态、加载失败态' }),
+    content('work-detail-meta', '状态信息', '作品状态信息', '作品详情接口返回标题、状态、生成时间和失败原因。'),
+    item('work-detail-download', '按钮', '保存作品按钮', '① 完成状态点击保存到相册；② 生成中状态禁用。', { states: '默认态、禁用态、加载态' }),
+    item('work-detail-delete', '按钮', '删除作品按钮', '① 点击后触发删除确认；② 删除成功返回作品列表。'),
+    item('work-detail-retry', '按钮', '重新制作按钮', '① 失败状态点击进入 AI 视频生成页，并保留原模板参数。')
+  ],
+  member: [
+    content('member-hero', '权益背景区', '会员权益主视觉', '会员配置接口返回标题、权益摘要和平台价格。'),
+    item('member-platform-switch', '分段控制', 'iOS/Android 平台切换', '① 点击 Android 或 iOS 切换对应购买规则；② 当前页面不跳转。', { states: '选中态、未选中态' }),
+    content('member-benefits', '权益列表', '会员权益列表', '会员配置接口返回权益项。', { fields: [['benefits', 'array，权益名称与描述，后端返回']] }),
+    item('member-plan-list', '单选列表', '会员套餐选择', '① 点击套餐后选中；② 底部购买按钮使用当前套餐价格。', { states: '选中态、未选中态' }),
+    item('member-agreement', '复选框', '会员协议确认', '① Android 购买前必须手动勾选会员协议和续费协议；② 未勾选点击购买需要阻断提示。', { states: '勾选态、未勾选态、错误态', required: '是' }),
+    content('member-ios-note', '说明文本', 'iOS 订阅说明', '前端根据 iOS 平台规则展示。'),
+    item('member-pay-button', '按钮', '3 天免费试用按钮', '① 点击后进入支付确认或系统支付；② 支付成功返回来源页面。', { states: '默认态、加载态、禁用态' }),
+    item('member-leave', '文本按钮', '暂不开通按钮', '① 点击后展示离开挽留弹窗。'),
+    item('member-platform-switch', '弹窗', '挽留/倒计时弹窗', '① 用户离开时展示挽留；② 继续查看后展示倒计时优惠；③ 倒计时结束恢复普通购买页。')
+  ],
+  credits: [
+    content('credits-balance', '余额卡片', '积分余额', '积分账户接口返回余额和冻结积分。', { fields: [['balance', 'number，当前可用积分'], ['frozen', 'number，冻结积分']] }),
+    item('credits-package-1', '充值套餐', '600 积分套餐', '① 点击后选中套餐；② 支付按钮按当前套餐创建订单。'),
+    item('credits-package-2', '充值套餐', '1800 积分套餐', '① 点击后选中套餐；② 支付按钮按当前套餐创建订单。'),
+    item('credits-package-3', '充值套餐', '5000 积分套餐', '① 点击后选中套餐；② 支付按钮按当前套餐创建订单。'),
+    item('credits-pay-button', '按钮', '确认充值按钮', '① 点击创建充值订单；② 支付成功后积分到账并写入历史记录。', { states: '默认态、加载态、禁用态' }),
+    content('credits-history', '列表', '积分历史记录', '积分流水接口返回充值和消耗记录。', { states: '默认态、空数据态、加载失败态', fields: [['type', 'recharge/consume'], ['amount', 'number，积分变化'], ['createdAt', 'datetime，流水时间']] })
   ],
   components: [
-    { id: 'components-preview', kind: 'content', type: '组件示例', title: '组件示例', dataSource: '前端组件库静态示例。', purpose: '展示框架组件基线。', effect: '后续真实页面复用这些样式。', bounds: '不涉及业务输入输出。', exceptions: '组件缺失时补充组件库。', reviewed: true }
+    content('components-preview', '组件示例', '组件示例', '前端组件库静态示例。')
   ]
 };
+
+const editItems = localNoteEdits?.items || {};
+
+const mergeInteractionList = (pageId, stateId, list) => {
+  const pageEdits = editItems[pageId] || {};
+  const stateEdits = pageEdits[stateId] || pageEdits.__default || {};
+  if (!Array.isArray(list) || !Object.keys(stateEdits).length) return list;
+  return list.map((entry) => stateEdits[entry.id] ? { ...entry, ...stateEdits[entry.id] } : entry);
+};
+
+export const pageInteractions = Object.fromEntries(
+  Object.entries(basePageInteractions).map(([pageId, value]) => {
+    if (Array.isArray(value)) return [pageId, mergeInteractionList(pageId, '__default', value)];
+    return [
+      pageId,
+      Object.fromEntries(
+        Object.entries(value).map(([stateId, list]) => [stateId, mergeInteractionList(pageId, stateId, list)])
+      )
+    ];
+  })
+);

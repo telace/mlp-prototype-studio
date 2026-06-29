@@ -1,4 +1,4 @@
-import { uiButtonSpec, uiPlaceholderSpec, uiSpacingSpec, uiThemeSpec, uiTypeSpec } from '../project/project-data.js';
+import { uiButtonSpec, uiComponentSplitSpec, uiPlaceholderSpec, uiSpacingSpec, uiThemeSpec, uiTypeSpec } from '../project/project-data.js';
 
 export default function UISpecPage() {
   return (
@@ -71,7 +71,18 @@ export default function UISpecPage() {
           ))}
         </div>
       </section>
+      <section className="ui-spec-section">
+        <h3>组件拆分规范</h3>
+        <div className="ui-spec-table compact">
+          {uiComponentSplitSpec.map((item) => (
+            <article key={item.name}>
+              <strong>{item.name}</strong>
+              <span>{item.value}</span>
+              <p>{item.usage}</p>
+            </article>
+          ))}
+        </div>
+      </section>
     </section>
   );
 }
-

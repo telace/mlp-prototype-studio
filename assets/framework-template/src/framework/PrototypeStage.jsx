@@ -10,25 +10,37 @@ export default function PrototypeStage({ children, page, activeState, setActiveS
     const inner = stateScrollerRef.current;
     const scroller = inner?.closest('.prototype-state-switch');
     const activeButton = inner?.querySelector('button.active');
-    activeButton?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     if (!scroller || !activeButton) return undefined;
-    const keepActiveButtonVisible = () => {
+    const updateOverflowState = () => {
+      const buttons = [...inner.querySelectorAll('button')];
+      const innerStyle = window.getComputedStyle(inner);
+      const scrollerStyle = window.getComputedStyle(scroller);
+      const gap = Number.parseFloat(innerStyle.columnGap || innerStyle.gap || '0') || 0;
+      const scrollerPadding = (Number.parseFloat(scrollerStyle.paddingLeft) || 0) + (Number.parseFloat(scrollerStyle.paddingRight) || 0);
+      const naturalWidth = buttons.reduce((sum, button) => sum + button.offsetWidth, 0) + Math.max(0, buttons.length - 1) * gap;
+      const isOverflowing = naturalWidth > scroller.clientWidth - scrollerPadding;
+      scroller.classList.toggle('is-overflowing', isOverflowing);
+      if (!isOverflowing) {
+        scroller.scrollTo({ left: 0, behavior: 'auto' });
+      }
+      return isOverflowing;
+    };
+    const centerActiveButton = (behavior = 'smooth') => {
+      if (!updateOverflowState()) return;
       const scrollerRect = scroller.getBoundingClientRect();
       const activeRect = activeButton.getBoundingClientRect();
-      let nextLeft = scroller.scrollLeft;
-      if (activeRect.left < scrollerRect.left + 6) {
-        nextLeft -= (scrollerRect.left + 6) - activeRect.left;
-      }
-      if (activeRect.right > scrollerRect.right - 6) {
-        nextLeft += activeRect.right - (scrollerRect.right - 6);
-      }
-      scroller.scrollTo({ left: Math.max(0, nextLeft), behavior: 'auto' });
+      const activeCenterOffset = (activeRect.left - scrollerRect.left) + activeRect.width / 2;
+      const nextLeft = scroller.scrollLeft + activeCenterOffset - scroller.clientWidth / 2;
+      const maxLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+      scroller.scrollTo({ left: Math.min(maxLeft, Math.max(0, nextLeft)), behavior });
     };
-    const frame = window.requestAnimationFrame(keepActiveButtonVisible);
-    const timer = window.setTimeout(keepActiveButtonVisible, 360);
+    const frame = window.requestAnimationFrame(() => centerActiveButton('smooth'));
+    const timer = window.setTimeout(() => centerActiveButton('auto'), 360);
+    window.addEventListener('resize', updateOverflowState);
     return () => {
       window.cancelAnimationFrame(frame);
       window.clearTimeout(timer);
+      window.removeEventListener('resize', updateOverflowState);
     };
   }, [page, activeState]);
 

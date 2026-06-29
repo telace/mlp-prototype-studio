@@ -1,7 +1,7 @@
 export const project = {
-  name: '新原型项目',
-  slug: 'new-mobile-prototype',
-  path: '/new-mobile-prototype/',
+  name: '通用 AI App 原型',
+  slug: 'universal-ai-app-prototype',
+  path: '/universal-ai-app-prototype/',
   defaultTheme: 'light'
 };
 

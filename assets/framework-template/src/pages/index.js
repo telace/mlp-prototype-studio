@@ -1,4 +1,9 @@
-export { default as SampleScreen } from './sample/SampleScreen.jsx';
-export { default as SecondaryExampleScreen } from './secondary/SecondaryExampleScreen.jsx';
+export { default as HomeScreen } from './home/HomeScreen.jsx';
+export { default as ProfileScreen } from './profile/ProfileScreen.jsx';
+export { default as WorksScreen } from './works/WorksScreen.jsx';
+export { default as MemberScreen } from './member/MemberScreen.jsx';
+export { default as CreditsScreen } from './credits/CreditsScreen.jsx';
+export { default as AiVideoScreen } from './ai-video/AiVideoScreen.jsx';
+export { default as WorkDetailScreen } from './work-detail/WorkDetailScreen.jsx';
 export { default as ComponentLibraryScreen } from './components/ComponentLibraryScreen.jsx';
 export { default as TabBar } from './shared/TabBar.jsx';

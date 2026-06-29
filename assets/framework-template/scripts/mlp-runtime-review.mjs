@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import * as projectData from '../src/project/project-data.js';
-import { getDirectoryItems, supportPageIds } from '../src/framework/supportPages.js';
+import { getRouteItems, supportPageIds } from '../src/framework/supportPages.js';
 
 const root = resolve(new URL('..', import.meta.url).pathname);
 const usesExternalRuntimeUrl = Boolean(process.env.MLP_RUNTIME_URL);
@@ -106,8 +106,8 @@ function createRuntimeCases() {
     return stateId && stateId !== 'default' ? `#/${pageId}/${stateId}` : `#/${pageId}`;
   };
 
-  const directoryItems = getDirectoryItems(pageDirectory);
-  for (const page of directoryItems) {
+  const routeItems = getRouteItems(pageDirectory);
+  for (const page of routeItems) {
     if (page.level === 'docs' || supportPageIds.includes(page.id)) {
       add(page.label, `#/${page.id}`, 'doc');
     } else if (page.id === 'profile') {
@@ -134,7 +134,7 @@ function createRuntimeCases() {
     add('非法状态容错 / 国内页收到海外状态', '#/loginCn/globalChoice', 'phone', '#/loginCn/cnOneTap');
   }
   if (typeof getPrototypeHash === 'function') {
-    const fallbackPage = directoryItems.find((page) => page.level !== 'docs' && !supportPageIds.includes(page.id))?.id || directoryItems[0]?.id || 'sample';
+    const fallbackPage = routeItems.find((page) => page.level !== 'docs' && !supportPageIds.includes(page.id))?.id || routeItems[0]?.id || 'sample';
     const fallbackState = typeof getStateOptions === 'function' ? getStateOptions(fallbackPage)[0]?.id : 'default';
     add('非法页面容错', '#/missing-page', 'phone', hashFor(fallbackPage, fallbackState));
   }

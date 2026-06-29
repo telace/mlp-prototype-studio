@@ -5,6 +5,7 @@ import { getDirectoryItems, supportPageIds } from '../src/framework/supportPages
 
 const root = resolve(new URL('..', import.meta.url).pathname);
 const srcRoot = resolve(root, 'src');
+const localEditsPath = resolve(root, 'src/project/notes/local-edits.json');
 
 const collectFiles = (dir, extensions) => readdirSync(dir)
   .flatMap((entry) => {
@@ -20,6 +21,13 @@ const source = sourceFiles
   .join('\n');
 
 const uniq = (items) => [...new Set(items)].filter(Boolean).sort();
+const readJsonSafe = (file) => {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'));
+  } catch {
+    return {};
+  }
+};
 
 function extractBoundElementIds(text) {
   const ids = [];
@@ -67,6 +75,17 @@ const missingSources = documentedIds.filter((id) => !boundIds.includes(id));
 const unreviewedDocs = documentedItems
   .filter(({ item }) => item.reviewed !== true)
   .map(({ page, state, item }) => `${page.label || page.id}/${state.label || state.id}/${item.title || item.id}`);
+const localEdits = readJsonSafe(localEditsPath);
+const collectPendingEdits = (bucketName, bucket) => Object.entries(bucket || {}).flatMap(([pageId, states]) => (
+  Object.entries(states || {}).flatMap(([stateId, items]) => (
+    Object.entries(items || {}).map(([itemId, item]) => `${bucketName}:${pageId}/${stateId}/${item.title || item.notes || itemId}`)
+  ))
+));
+const pendingLocalEdits = [
+  ...collectPendingEdits('items', localEdits.items),
+  ...collectPendingEdits('pages', localEdits.pages),
+  ...collectPendingEdits('tests', localEdits.tests)
+];
 const incompleteDocs = documentedItems.flatMap(({ page, state, item }) => {
   const prefix = `${page.label || page.id}/${state.label || state.id}/${item.title || item.id}`;
   const missing = [];
@@ -117,6 +136,11 @@ const checks = [
     name: '编辑审核确认',
     pass: unreviewedDocs.length === 0,
     detail: unreviewedDocs.length ? `未确认: ${unreviewedDocs.join('；')}` : '所有交互说明已标记 reviewed: true'
+  },
+  {
+    name: '本地编辑已合并',
+    pass: pendingLocalEdits.length === 0,
+    detail: pendingLocalEdits.length ? `local-edits.json 中仍有待合并编辑: ${pendingLocalEdits.join('；')}` : '没有待合并的本地编辑'
   }
 ];
 

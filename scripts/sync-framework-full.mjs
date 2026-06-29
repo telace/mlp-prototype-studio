@@ -35,7 +35,17 @@ copyDir('src/app');
 copyDir('src/docs');
 copyDir('src/prototype-ui');
 copyDir('src/project/test-cases');
+if (!existsSync(resolve(projectRoot, 'src/project/specs.js'))) {
+  copyFile('src/project/specs.js');
+}
+if (!existsSync(resolve(projectRoot, 'src/project/prompts.js'))) {
+  copyFile('src/project/prompts.js');
+}
 copyFile('src/styles.css');
+copyFile('vite.config.js');
+if (!existsSync(resolve(projectRoot, 'src/project/notes/local-edits.json'))) {
+  copyFile('src/project/notes/local-edits.json');
+}
 copyFile('scripts/mlp-loop-review.mjs');
 copyFile('scripts/mlp-generate-docs.mjs');
 copyFile('scripts/mlp-prototype-acceptance.mjs');
@@ -65,6 +75,24 @@ packageJson.scripts['mlp:rollback'] = `node ${resolve(skillRoot, 'scripts/mlp-ve
 packageJson.scripts['mlp:access'] = `node ${resolve(skillRoot, 'scripts/mlp-access.mjs')} show .`;
 writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
+const projectDataPath = resolve(projectRoot, 'src/project/project-data.js');
+if (existsSync(projectDataPath)) {
+  let projectDataSource = readFileSync(projectDataPath, 'utf8');
+  const requiredProjectExports = [
+    "export * from './specs.js';",
+    "export * from './prompts.js';"
+  ];
+  for (const line of requiredProjectExports) {
+    if (!projectDataSource.includes(line)) {
+      projectDataSource = projectDataSource.replace(
+        "export * from './notes/index.js';",
+        `export * from './notes/index.js';\n${line}`
+      );
+    }
+  }
+  writeFileSync(projectDataPath, projectDataSource);
+}
+
 console.log(`Synced complete MLP framework layer into ${projectRoot}`);
 console.log('- src/framework/*');
 console.log('- src/app/*');
@@ -72,6 +100,8 @@ console.log('- src/docs/*');
 console.log('- src/prototype-ui/*');
 console.log('- src/project/test-cases/*');
 console.log('- src/styles.css');
+console.log('- vite.config.js');
+console.log('- src/project/notes/local-edits.json when missing');
 console.log('- scripts/mlp-loop-review.mjs');
 console.log('- scripts/mlp-generate-docs.mjs');
 console.log('- scripts/mlp-prototype-acceptance.mjs');

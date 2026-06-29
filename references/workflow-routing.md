@@ -32,6 +32,7 @@ Use this reference to keep `mlp` work context-light. Load only the references ne
 - `npm run mlp:visual-snapshot`: create screenshots without gating. Use only when explicitly requested for visual evidence.
 - `npm run mlp:visual-review -- --update-baseline`: update expected screenshots only after the user explicitly accepts the visual change.
 - `npm run mlp:release -- --title "..." --summary "..."`: create an online-ready version and generate `public/changelog.json`. Do not use this for ordinary local preview.
+- `npm run mlp:export-ai`: export a non-image AI handoff Markdown file to `exports/ai-handoff.md` and `public/ai-handoff.md`. Use when the user wants another AI to understand the prototype without executing JS. The export includes project info, page directory, page states/routes, text layout tree, interaction mapping, Product Notes, Test Cases, and `checked` status. This command is non-visual and must not create screenshots.
 
 ## Verification Routing
 
@@ -39,6 +40,7 @@ Use this reference to keep `mlp` work context-light. Load only the references ne
 - Ordinary prototype edits, such as copy, spacing, a single button, one card, one page layout adjustment, or page-level style changes: run `npm run mlp:fast-check`.
 - Route, page-state, login-flow, directory, state-switch, or right-panel behavior changes: run `npm run mlp:route-check`.
 - Documentation output after explicit design confirmation: run `npm run mlp:docs-complete`. This is a documentation/route check and must not create visual snapshots.
+- AI handoff export: run `npm run mlp:export-ai`. It is a read/export operation and should not mutate prototype source files except `exports/ai-handoff.md` and `public/ai-handoff.md`.
 - Framework refresh for an existing project: run the refresh wrapper or `npm run mlp:route-check` by default. Use `npm run mlp:acceptance` for complete non-visual validation.
 - Visual review is explicit-only. Trigger it only when the user directly says `视觉验收`, `视觉检查`, `截图验收`, `跑 visual-review`, `更新视觉基线`, or asks for screenshots as evidence. Do not infer visual review from `上线/部署`, `交付`, `迁移`, `重构`, `完整检查`, or `验收` unless the wording includes visual/screenshot/baseline.
 

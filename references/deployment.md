@@ -44,37 +44,59 @@ server {
 
 For HTTPS, use the server's existing certificate workflow. Do not invent certificate paths.
 
-## User's Current Deployment Configuration
+## Deployment Configuration
 
-When the user asks to deploy to their known prototype server and provides no contrary instruction, prefer:
+Deployment settings must be configurable. Resolve values in this order:
 
-- SSH config alias: `prototype-budgit`
-- SSH host fallback: `118.178.184.99`
-- Domain: `prototype.budgit.cc`
-- SSH user: `root`
-- Static root: `/var/www/prototype.budgit.cc`
-- Nginx binary: `/usr/local/nginx/sbin/nginx`
-- Vhost directory: `/usr/local/nginx/conf/vhost/`
-- Current vhost file: `/usr/local/nginx/conf/vhost/prototype.budgit.cc.conf`
-- Local SSH key configured outside this skill: `~/.ssh/prototype_budgit`
-- Local SSH config should contain a `Host prototype-budgit` entry pointing to `118.178.184.99` as `root`.
+1. User-provided values in the current task.
+2. Environment variables.
+3. The default MLP domain/path profile below.
 
-Default to the SSH alias in deployment commands:
+Do not deploy MLP prototypes to the previous Aliyun server (`118.178.184.99`) unless the user explicitly asks for Aliyun in the current task. The current preferred production target is Spaceship or another non-Aliyun host configured through environment variables or user-provided credentials.
+
+Supported environment variables:
 
 ```bash
-ssh prototype-budgit 'echo deploy-ok'
-scp /tmp/<archive>.tgz prototype-budgit:/tmp/<archive>.tgz
+MLP_DEPLOY_DOMAIN=prototype.flnisbest.xyz
+MLP_DEPLOY_METHOD=ssh
+MLP_DEPLOY_SSH_ALIAS=prototype-spaceship
+MLP_DEPLOY_HOST=104.207.81.197
+MLP_DEPLOY_USER=root
+MLP_DEPLOY_ROOT=/srv/prototype.flnisbest.xyz
+MLP_DEPLOY_PORT=22022
+MLP_DEPLOY_SSH_KEY=$HOME/.ssh/id_ed25519
 ```
 
-Use `root@118.178.184.99` only as a fallback when the SSH alias is unavailable.
+Default MLP domain/path profile:
+
+- Subdomain: `prototype.flnisbest.xyz`
+- Parent domain: `flnisbest.xyz`
+- DNS: configure in Spaceship to point `prototype.flnisbest.xyz` to `104.207.81.197`. Do not point it to Aliyun unless explicitly requested.
+- Deploy method: `${MLP_DEPLOY_METHOD:-ssh}`. Use `ssh/scp/rsync` when Spaceship provides shell access; use `sftp` only when shell access is unavailable.
+- SSH alias: `${MLP_DEPLOY_SSH_ALIAS:-prototype-spaceship}`.
+- SSH host: `${MLP_DEPLOY_HOST:-104.207.81.197}`.
+- SSH user: `${MLP_DEPLOY_USER:-root}`.
+- Static root: `${MLP_DEPLOY_ROOT:-/srv/prototype.flnisbest.xyz}`.
+- Port: `${MLP_DEPLOY_PORT:-22022}`.
+- Local SSH key path hint: `${MLP_DEPLOY_SSH_KEY:-~/.ssh/id_ed25519}`.
+- Web server: Caddy on the Spaceship VM. Current known existing config keeps `api.flnisbest.xyz` as `reverse_proxy 127.0.0.1:8080`. Add or preserve a separate `prototype.flnisbest.xyz` static `root * /srv/prototype.flnisbest.xyz` site block when deployment is requested.
+
+Default to the configured SSH/SFTP alias in deployment commands:
+
+```bash
+ssh "${MLP_DEPLOY_SSH_ALIAS}" 'echo deploy-ok'
+scp /tmp/<archive>.tgz "${MLP_DEPLOY_SSH_ALIAS}":/tmp/<archive>.tgz
+```
+
+Use `${MLP_DEPLOY_USER}@${MLP_DEPLOY_HOST}` only as a fallback when the SSH alias is unavailable, with port `${MLP_DEPLOY_PORT:-22022}`. If host, user, root, or authentication details are missing, stop and ask the user for the Spaceship hosting details instead of falling back to Aliyun.
 
 Do not store passwords, SSH private keys, API tokens, or certificate secrets in this skill. If authentication is required and no usable key/session exists, ask the user in the current thread.
 
 Deploy projects under independent paths:
 
 ```text
-https://prototype.budgit.cc/<project-slug>/
-/var/www/prototype.budgit.cc/<project-slug>/
+https://prototype.flnisbest.xyz/<project-slug>/
+${MLP_DEPLOY_ROOT}/<project-slug>/
 ```
 
 Keep the domain root for a project index/listing, not for a single design by default.
@@ -84,7 +106,7 @@ Keep the domain root for a project index/listing, not for a single design by def
 For mature MLP delivery, prefer immutable releases with a current pointer:
 
 ```text
-/var/www/prototype.budgit.cc/
+${MLP_DEPLOY_ROOT}/
 ├── index.html
 ├── projects.json
 └── <project-slug>/
@@ -100,7 +122,7 @@ For mature MLP delivery, prefer immutable releases with a current pointer:
 The public URL remains:
 
 ```text
-https://prototype.budgit.cc/<project-slug>/
+https://prototype.flnisbest.xyz/<project-slug>/
 ```
 
 `current/` contains the static files of the current version, copied from the selected `.mlp/releases/x.x.xx/dist/`. Rollback should update `current/` and `current.json` from an existing immutable release rather than rebuilding from source.
@@ -117,31 +139,30 @@ Password metadata is stored in `<project>/.mlp/access.json`; static hosting must
 
 Cloud deployment must preserve the same project isolation rules as local files.
 
-- One prototype project maps to one server subdirectory: `/var/www/prototype.budgit.cc/<project-slug>/`.
-- One prototype project maps to one public URL: `https://prototype.budgit.cc/<project-slug>/`.
+- One prototype project maps to one server subdirectory: `${MLP_DEPLOY_ROOT}/<project-slug>/`.
+- One prototype project maps to one public URL: `https://${MLP_DEPLOY_DOMAIN:-prototype.flnisbest.xyz}/<project-slug>/`.
 - Never upload one project's `dist/` output into another project's server directory.
-- Never deploy a project to `/var/www/prototype.budgit.cc/` directly unless the user explicitly asks to replace the domain root.
+- Never deploy a project to `${MLP_DEPLOY_ROOT}/` directly unless the user explicitly asks to replace the domain root.
 - Never use a page name, state name, or feature step as the deployment directory. Use only the project slug.
 - Before deploying, identify the source project from `<MLP_PROJECT_ROOT>/<project-slug>/` and deploy only that project's build output.
 - Resolve `<MLP_PROJECT_ROOT>` in this order: user-specified path for the current task, `MLP_PROJECT_ROOT` environment variable, then the default `~/Documents/Codex/mlp-projects/`.
 - If a similarly named folder exists outside `<MLP_PROJECT_ROOT>/`, treat it as non-canonical and do not deploy it unless the user explicitly confirms it is the intended source.
 - Back up only the target project directory before replacement. Do not move, delete, or rewrite sibling project directories.
-- Deployment cleanup commands must be scoped to `/var/www/prototype.budgit.cc/<project-slug>/`, not the domain root.
+- Deployment cleanup commands must be scoped to `${MLP_DEPLOY_ROOT}/<project-slug>/`, not the domain root.
 - If the target project slug is unclear, stop and ask which `<MLP_PROJECT_ROOT>/<project-slug>/` should be deployed.
 
 Before replacing files:
 
 1. Confirm the project source is under `<MLP_PROJECT_ROOT>/<project-slug>/`.
 2. Build the project and create a static archive from `dist/`. The project `prebuild` step must update `public/version.json`, and the deployed `dist/version.json` must be included in the archive.
-3. Test SSH access with `ssh prototype-budgit 'echo deploy-ok'`.
-4. Read the existing vhost.
+3. Test SSH/SFTP access with the configured Spaceship target. If shell access is available, use `ssh "${MLP_DEPLOY_SSH_ALIAS}" 'echo deploy-ok'`; otherwise test SFTP listing/upload in a temporary path.
+4. Confirm the remote web root maps to `https://${MLP_DEPLOY_DOMAIN:-prototype.flnisbest.xyz}/`.
 5. Back up the current project directory with a timestamp.
-6. Upload the new static archive to `/tmp` with `scp`.
-7. Extract into `/var/www/prototype.budgit.cc/<project-slug>/`.
+6. Upload the new static archive or extracted `dist/` files using the configured method.
+7. Extract or synchronize into `${MLP_DEPLOY_ROOT}/<project-slug>/`.
 8. Remove `._*` macOS metadata files if present.
-9. Run `nginx -t`.
-10. Reload Nginx.
-11. Verify with `curl` that the HTML references the new JS/CSS assets.
-12. Verify with `curl` that `https://prototype.budgit.cc/<project-slug>/version.json` returns the current version JSON.
+9. If the host exposes web-server controls, run the provider-supported config check/reload. For shared hosting/SFTP-only deployments, skip Nginx operations.
+10. Verify with `curl` that the HTML references the new JS/CSS assets.
+11. Verify with `curl` that `https://${MLP_DEPLOY_DOMAIN:-prototype.flnisbest.xyz}/<project-slug>/version.json` returns the current version JSON.
 
 Never overwrite the main site root unless the user explicitly asks.

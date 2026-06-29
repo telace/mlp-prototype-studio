@@ -21,6 +21,10 @@ const runtimeReviewScriptSource = resolve(templateRoot, 'scripts/mlp-runtime-rev
 const runtimeReviewScriptTarget = resolve(projectScriptsDir, 'mlp-runtime-review.mjs');
 const visualReviewScriptSource = resolve(templateRoot, 'scripts/mlp-visual-review.mjs');
 const visualReviewScriptTarget = resolve(projectScriptsDir, 'mlp-visual-review.mjs');
+const prototypeStageSource = resolve(templateRoot, 'src/framework/PrototypeStage.jsx');
+const prototypeStageTarget = resolve(projectRoot, 'src/framework/PrototypeStage.jsx');
+const specPanelSource = resolve(templateRoot, 'src/framework/SpecPanel.jsx');
+const specPanelTarget = resolve(projectRoot, 'src/framework/SpecPanel.jsx');
 
 if (!existsSync(packagePath) || !existsSync(stylesPath)) {
   console.error(`Not an MLP React project: ${projectRoot}`);
@@ -34,6 +38,12 @@ if (existsSync(runtimeReviewScriptSource)) {
 }
 if (existsSync(visualReviewScriptSource)) {
   copyFileSync(visualReviewScriptSource, visualReviewScriptTarget);
+}
+if (existsSync(prototypeStageSource) && existsSync(prototypeStageTarget)) {
+  copyFileSync(prototypeStageSource, prototypeStageTarget);
+}
+if (existsSync(specPanelSource) && existsSync(specPanelTarget)) {
+  copyFileSync(specPanelSource, specPanelTarget);
 }
 if (existsSync(templatePrototypeUiDir)) {
   mkdirSync(projectPrototypeUiDir, { recursive: true });
@@ -262,13 +272,21 @@ body,
 }
 
 .prototype-state-switch > div {
-  min-width: 100%;
+  min-width: 0;
   width: max-content;
   box-sizing: border-box;
-  padding-inline: var(--state-switch-edge-space);
+  padding-inline: 0;
   display: flex;
   justify-content: center;
   gap: 6px;
+  margin-inline: auto;
+}
+
+.prototype-state-switch.is-overflowing > div {
+  min-width: 100%;
+  padding-inline: var(--state-switch-edge-space);
+  justify-content: flex-start;
+  margin-inline: 0;
 }
 
 .prototype-state-switch button {

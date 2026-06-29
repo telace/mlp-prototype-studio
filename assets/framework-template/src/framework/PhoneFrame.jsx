@@ -1,11 +1,12 @@
 import { ArrowLeft } from 'lucide-react';
-import { getPageShellConfig, pageCopy } from '../project/project-data.js';
+import { getPageShellConfig, pageCopy, pageDirectory } from '../project/project-data.js';
 import { renderPhoneScreen } from '../project/routes.jsx';
 import { TabBar } from '../pages/index.js';
 
 export default function PhoneFrame({ page, activeState, setPage, setActiveState, setActiveInteraction, theme }) {
   const shell = getPageShellConfig(page);
   const shouldCoverStatusbar = shell.secondary && ['sheet', 'modal'].includes(activeState);
+  const fallbackPage = pageDirectory.find((item) => item.level !== 'docs')?.id || pageDirectory[0]?.id || 'home';
   return (
     <div className="phone" data-theme={theme} data-page-level={shell.level}>
       <div className="statusbar">
@@ -15,7 +16,7 @@ export default function PhoneFrame({ page, activeState, setPage, setActiveState,
       {shouldCoverStatusbar ? (
         <button className="phone-status-scrim" type="button" onClick={() => setActiveState('default')} aria-label="关闭遮罩" />
       ) : null}
-      {shell.showBackBar ? <BackBar title={pageCopy[page]?.title || '页面'} onBack={() => { setActiveState('default'); setPage('sample'); }} /> : null}
+      {shell.showBackBar ? <BackBar title={pageCopy[page]?.title || '页面'} onBack={() => { setActiveState('default'); setPage(fallbackPage); }} /> : null}
       <div className={shell.screenClassName}>
         {renderPhoneScreen({ page, activeState, setPage, setActiveState, setActiveInteraction })}
       </div>
