@@ -195,11 +195,11 @@ If semantic split verification exposes missing imports or runtime-only dependenc
    - Keep mobile/tablet breakpoint single-column behavior.
    - Keep status indicator colors aligned with `visual-standard.md`.
    - Keep reusable component CSS aligned with `component-patterns.md`.
-6. Run the framework guard sync script from the skill before final verification:
+6. Run the complete framework sync script from the skill before final verification:
    ```bash
-   node <mobile-lowfi-prototype-skill-dir>/scripts/sync-framework-guards.mjs <MLP_PROJECT_ROOT>/<project-slug>
+   node <mobile-lowfi-prototype-skill-dir>/scripts/sync-framework-full.mjs <MLP_PROJECT_ROOT>/<project-slug>
    ```
-   This script must be treated as part of framework refresh. It copies the latest `mlp:review` script, ensures `package.json` exposes `npm run mlp:review`, and inserts or updates two managed CSS blocks:
+   This is the standard framework refresh. It copies the complete shared framework, prototype UI primitives, review/runtime scripts, test-case helpers, root style entry, and managed styles. The older `sync-framework-guards.mjs` is a targeted compatibility patch only; use it when a full framework sync is deliberately out of scope. The managed CSS includes:
    - `MLP FRAMEWORK SHELL GUARDS`: fixes workspace background isolation, four fixed workspace columns, `546px` Product Notes width, bright hard-coded shell colors (`#F5F6F8` workspace, `#FFFFFF` panels, `#F3F4F6` muted document surfaces, `#E5E7EB` borders, `#5F6670` muted text), independent project/settings rail, independent theme card, scrollable page directory body, connector overlay styling, phone shell black frame, phone theme tokens, explicit `screen--primary` / `screen--secondary` / `screen--custom` viewport sizing, and secondary status-bar/topbar alignment.
    - `MLP STRICT FRAMEWORK GUARDS`: fixes common framework drift such as unreadable theme text, broken bottom tab active states, non-tokenized template titles, login/member control contrast issues, and member hero surfaces.
    The managed guards must also cover Theme/Guide card details, prototype state switch transparency, separate Product Notes/Test Cases right-panel structure, element-level Test Cases anchors, connector overlay colors, and the rule that primary tabs do not add an extra black bottom shell block.

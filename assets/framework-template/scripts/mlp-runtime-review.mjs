@@ -2,13 +2,24 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as projectData from '../src/project/project-data.js';
 import { getRouteItems, supportPageIds } from '../src/framework/supportPages.js';
 
-const root = resolve(new URL('..', import.meta.url).pathname);
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const usesExternalRuntimeUrl = Boolean(process.env.MLP_RUNTIME_URL);
 const baseUrl = process.env.MLP_RUNTIME_URL || `http://127.0.0.1:${process.env.MLP_RUNTIME_PORT || '5375'}/`;
-const chromePath = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chromeCandidates = process.platform === 'win32'
+  ? [
+      resolve(process.env.LOCALAPPDATA || '', 'Google/Chrome/Application/chrome.exe'),
+      resolve(process.env.PROGRAMFILES || '', 'Google/Chrome/Application/chrome.exe'),
+      resolve(process.env['PROGRAMFILES(X86)'] || '', 'Google/Chrome/Application/chrome.exe'),
+      resolve(process.env.PROGRAMFILES || '', 'Microsoft/Edge/Application/msedge.exe')
+    ]
+  : process.platform === 'darwin'
+    ? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge']
+    : ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+const chromePath = process.env.CHROME_PATH || chromeCandidates.find(existsSync) || '';
 const remoteDebuggingPort = Number(process.env.MLP_CHROME_DEBUG_PORT || 9335);
 const userDataDir = mkdtempSync(resolve(tmpdir(), 'mlp-runtime-chrome-'));
 const wait = (ms) => new Promise((resolveWait) => setTimeout(resolveWait, ms));
@@ -64,7 +75,7 @@ async function ensureServer() {
 
 async function launchChrome() {
   if (!existsSync(chromePath)) {
-    throw new Error(`Chrome executable not found: ${chromePath}. Set CHROME_PATH to override.`);
+    throw new Error(`Chrome executable not found. Checked: ${chromeCandidates.join(', ')}. Set CHROME_PATH to override.`);
   }
   const chrome = spawnLogged(chromePath, [
     '--headless=new',
@@ -349,6 +360,81 @@ async function inspectPhoneContrast(cdp, testCase, theme) {
   return evaluation.result.value || [];
 }
 
+async function inspectPhoneConsistency(cdp, testCase) {
+  if (testCase.kind !== 'phone') return [];
+  await cdp.send('Page.navigate', { url: testCase.url });
+  await wait(350);
+  const grayscale = projectData.designContract?.palette?.mode === 'grayscale';
+  const evaluation = await cdp.send('Runtime.evaluate', {
+    returnByValue: true,
+    expression: `(() => {
+      const findings = [];
+      const fontScale = [11, 12, 13, 14, 15, 16, 18, 22, 26];
+      const parseRgb = (value) => {
+        const match = value.match(/rgba?\\(([^)]+)\\)/);
+        if (!match) return null;
+        const [r, g, b, a = 1] = match[1].split(',').map(Number);
+        return { r, g, b, a };
+      };
+      const phone = document.querySelector('.phone');
+      const statusbar = phone?.querySelector(':scope > .statusbar');
+      const navbar = phone?.querySelector(':scope > .nav-bar');
+      const screen = phone?.querySelector(':scope > .screen');
+      const pageRoot = screen?.querySelector(':scope > .app-page');
+      if (!phone || !statusbar || !screen || !pageRoot) {
+        findings.push({ type: 'canvas-structure', detail: 'phone/statusbar/screen/direct app-page structure is incomplete' });
+      } else {
+        const phoneRect = phone.getBoundingClientRect();
+        const statusRect = statusbar.getBoundingClientRect();
+        const navRect = navbar?.getBoundingClientRect();
+        const screenRect = screen.getBoundingClientRect();
+        const coveredHeight = statusRect.height + (navRect?.height || 0) + screenRect.height;
+        if (Math.abs(coveredHeight - phoneRect.height) > 1 || Math.abs(screenRect.bottom - phoneRect.bottom) > 1) {
+          findings.push({ type: 'canvas-coverage', detail: 'phone ' + Math.round(phoneRect.height) + 'px, chrome+screen ' + Math.round(coveredHeight) + 'px, bottom gap ' + Math.round(phoneRect.bottom - screenRect.bottom) + 'px' });
+        }
+        if (pageRoot.getBoundingClientRect().height + 1 < screen.clientHeight) {
+          findings.push({ type: 'page-fill', detail: 'direct app-page is shorter than viewport: ' + Math.round(pageRoot.getBoundingClientRect().height) + 'px < ' + screen.clientHeight + 'px' });
+        }
+        const statusBg = getComputedStyle(statusbar).backgroundColor;
+        const expectedTopBg = getComputedStyle(navbar || screen).backgroundColor;
+        const pageBg = getComputedStyle(pageRoot).backgroundColor;
+        if (statusBg !== expectedTopBg) {
+          findings.push({ type: 'statusbar-tone', detail: statusBg + ' does not match ' + expectedTopBg });
+        }
+        if (!navbar && pageBg !== getComputedStyle(screen).backgroundColor) {
+          findings.push({ type: 'page-tone', detail: 'primary app-page ' + pageBg + ' does not match screen ' + getComputedStyle(screen).backgroundColor });
+        }
+      }
+      document.querySelectorAll('.phone button, .phone input, .phone textarea, .phone select').forEach((element) => {
+        const rect = element.getBoundingClientRect();
+        if (rect.width < 2 || rect.height < 2 || getComputedStyle(element).display === 'none') return;
+        if (!element.closest('[class*="mlp-"]')) findings.push({ type: 'primitive', detail: element.outerHTML.slice(0, 100) });
+        if (rect.height < 30) findings.push({ type: 'target', detail: element.tagName.toLowerCase() + ' height ' + Math.round(rect.height) });
+      });
+      document.querySelectorAll('.phone *').forEach((element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        if (rect.width < 2 || rect.height < 2 || style.display === 'none' || style.visibility === 'hidden') return;
+        const size = Number.parseFloat(style.fontSize);
+        if (element.textContent?.trim() && size >= 9 && !fontScale.some((token) => Math.abs(token - size) < 0.2)) {
+          findings.push({ type: 'type-scale', detail: element.tagName.toLowerCase() + '.' + String(element.className || '').slice(0, 50) + ' ' + size + 'px' });
+        }
+        if (${JSON.stringify(grayscale)}) {
+          for (const property of ['color', 'backgroundColor', 'borderTopColor']) {
+            const color = parseRgb(style[property]);
+            if (!color || color.a < 0.95) continue;
+            if (Math.max(color.r, color.g, color.b) - Math.min(color.r, color.g, color.b) > 12) {
+              findings.push({ type: 'palette', detail: property + ' ' + style[property] + ' on ' + element.tagName.toLowerCase() + '.' + String(element.className || '').slice(0, 40) });
+            }
+          }
+        }
+      });
+      return findings.slice(0, 30);
+    })()`
+  });
+  return evaluation.result.value || [];
+}
+
 let server;
 let chrome;
 let cdp;
@@ -390,6 +476,18 @@ try {
     }
   }
   if (contrastFailures.length) fail(`Contrast review failed with ${contrastFailures.length} route/theme issue(s).`);
+
+  const consistencyFailures = [];
+  for (const testCase of cases) {
+    const findings = await inspectPhoneConsistency(cdp, testCase);
+    if (findings.length) consistencyFailures.push({ testCase, findings });
+  }
+  console.log(`MLP design consistency review: ${consistencyFailures.length ? 'FAIL' : 'PASS'} checked ${cases.filter((item) => item.kind === 'phone').length} phone route(s)`);
+  for (const item of consistencyFailures.slice(0, 20)) {
+    console.log(`FAIL consistency ${item.testCase.label}`);
+    for (const finding of item.findings.slice(0, 8)) console.log(`  - ${finding.type}: ${finding.detail}`);
+  }
+  if (consistencyFailures.length) fail(`Design consistency review failed with ${consistencyFailures.length} route issue(s).`);
 } finally {
   cdp?.close();
   chrome?.kill('SIGTERM');

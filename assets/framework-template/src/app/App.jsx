@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import AIHandoffModal from '../framework/AIHandoffModal.jsx';
+import AnnotationPanel from '../framework/AnnotationPanel.jsx';
 import CommandHelpModal from '../framework/CommandHelpModal.jsx';
 import ConnectorOverlay from '../framework/ConnectorOverlay.jsx';
 import PageDirectory from '../framework/PageDirectory.jsx';
 import PhoneFrame from '../framework/PhoneFrame.jsx';
 import ProjectSettingsRail from '../framework/ProjectSettingsRail.jsx';
 import PrototypeStage from '../framework/PrototypeStage.jsx';
-import SpecPanel from '../framework/SpecPanel.jsx';
 import UpdateBanner from '../framework/UpdateBanner.jsx';
 import { getRouteItems, supportPageIds } from '../framework/supportPages.js';
 import ChangelogPage from '../docs/ChangelogPage.jsx';
@@ -25,6 +25,7 @@ import {
   readPageReadVersions,
   writePageReadVersions
 } from '../project/project-data.js';
+import bundledLocalEdits from '../project/notes/local-edits.json' with { type: 'json' };
 
 function parseRoute() {
   const directoryItems = getRouteItems(pageDirectory);
@@ -52,6 +53,10 @@ export default function App() {
   const [commandHelpOpen, setCommandHelpOpen] = useState(false);
   const [aiHandoffOpen, setAiHandoffOpen] = useState(false);
   const [notesDirty, setNotesDirty] = useState(false);
+  const [annotationMode, setAnnotationMode] = useState('preview');
+  const [annotations, setAnnotations] = useState([]);
+  const [selectedAnnotation, setSelectedAnnotation] = useState(null);
+  const [pendingAnnotation, setPendingAnnotation] = useState(null);
   const [pageReadVersions, setPageReadVersions] = useState(readPageReadVersions);
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return getProjectDefaultTheme();
@@ -62,6 +67,42 @@ export default function App() {
   const spec = pageCopy[page] || pageCopy[pageDirectory[0]?.id] || { title: page, purpose: '未填写页面功能说明。', elements: [] };
   const ctx = { page, state: activeState };
   const isSupportPage = supportPageIds.includes(page) || pageDirectory.some((item) => item.id === page && item.level === 'docs');
+
+  useEffect(() => {
+    let disposed = false;
+    const source = import.meta.env.DEV
+      ? fetch('/src/project/notes/local-edits.json?t=' + Date.now()).then((response) => response.ok ? response.json() : bundledLocalEdits)
+      : Promise.resolve(bundledLocalEdits);
+    source
+      .then((payload) => {
+        if (disposed) return;
+        const stateItems = payload?.annotations?.[page]?.[activeState] || payload?.annotations?.[page]?.__default || {};
+        setAnnotations(Object.values(stateItems).filter((item) => !item.deleted));
+        setSelectedAnnotation(null);
+        setPendingAnnotation(null);
+      })
+      .catch(() => setAnnotations([]));
+    return () => { disposed = true; };
+  }, [page, activeState]);
+
+  const createAnnotation = (anchor) => {
+    const item = { ...anchor, id: 'annotation-' + Date.now(), pageId: page, stateId: activeState, kind: 'note', description: '', effect: '', dataSource: '' };
+    setPendingAnnotation(item);
+    setSelectedAnnotation(null);
+    setAnnotationMode('preview');
+  };
+  const saveAnnotation = (item) => {
+    setAnnotations((current) => [...current.filter((entry) => entry.id !== item.id), item]);
+    setPendingAnnotation(null);
+    setSelectedAnnotation(item);
+    setNotesDirty(false);
+  };
+  const deleteAnnotation = (item) => {
+    setAnnotations((current) => current.filter((entry) => entry.id !== item?.id));
+    setPendingAnnotation(null);
+    setSelectedAnnotation(null);
+    setNotesDirty(false);
+  };
 
   const toggleTheme = () => {
     setTheme((current) => {
@@ -85,11 +126,13 @@ export default function App() {
   const changePage = (nextPage) => {
     if (!confirmLeaveDirtyNotes()) return;
     setNotesDirty(false);
+    setAnnotationMode('preview');
     setPage(nextPage);
   };
   const changeState = (nextState) => {
     if (!confirmLeaveDirtyNotes()) return;
     setNotesDirty(false);
+    setAnnotationMode('preview');
     setActiveState(nextState);
   };
 
@@ -172,16 +215,20 @@ export default function App() {
           <PromptDocsPage />
         ) : (
           <PrototypeStage page={page} activeState={activeState} setActiveState={changeState} setActiveInteraction={setActiveInteraction}>
-            <PhoneFrame page={page} activeState={activeState} setPage={changePage} setActiveState={changeState} setActiveInteraction={setActiveInteraction} theme={theme} />
+            <PhoneFrame page={page} activeState={activeState} setPage={changePage} setActiveState={changeState} setActiveInteraction={setActiveInteraction} theme={theme} annotationMode={annotationMode} annotations={annotations} selectedAnnotationId={(pendingAnnotation || selectedAnnotation)?.id} onCreateAnnotation={createAnnotation} onSelectAnnotation={(item) => { setAnnotationMode('preview'); setPendingAnnotation(null); setSelectedAnnotation(item); }} />
           </PrototypeStage>
         )}
         {!isSupportPage ? (
-          <SpecPanel
-            spec={spec}
+          <AnnotationPanel
             ctx={ctx}
-            activeInteraction={activeInteraction}
-            setActiveInteraction={setActiveInteraction}
-            interactionGuideEnabled={interactionGuideEnabled}
+            mode={annotationMode}
+            setMode={setAnnotationMode}
+            annotations={annotations}
+            selected={selectedAnnotation}
+            pending={pendingAnnotation}
+            onSelect={(item) => { setPendingAnnotation(null); setSelectedAnnotation(item); }}
+            onSaved={saveAnnotation}
+            onDeleted={deleteAnnotation}
             onDirtyChange={setNotesDirty}
           />
         ) : null}

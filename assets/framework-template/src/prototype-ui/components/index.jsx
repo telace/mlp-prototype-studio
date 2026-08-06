@@ -64,6 +64,27 @@ export function IconButton({ icon, label, className, ...props }) {
   );
 }
 
+export function Pressable({ children, className, ...props }) {
+  return <button type="button" className={cx('mlp-pressable', className)} {...props}>{children}</button>;
+}
+
+export function TextInput({ className, ...props }) {
+  return <input className={cx('mlp-text-input', className)} {...props} />;
+}
+
+export function TextArea({ className, ...props }) {
+  return <textarea className={cx('mlp-text-area', className)} {...props} />;
+}
+
+export function Checkbox({ label, className, ...props }) {
+  return (
+    <label className={cx('mlp-checkbox', className)}>
+      <input type="checkbox" {...props} />
+      <span>{label}</span>
+    </label>
+  );
+}
+
 export function SegmentedControl({ options = [], value, onChange, className, ariaLabel = '分段控制' }) {
   return (
     <div className={cx('mlp-segmented', className)} role="group" aria-label={ariaLabel}>

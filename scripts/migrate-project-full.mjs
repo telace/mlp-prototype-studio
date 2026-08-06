@@ -193,6 +193,7 @@ function auditProject() {
 
   const requiredProjectFiles = [
     'src/project/meta.js',
+    'src/project/design.js',
     'src/project/directory.js',
     'src/project/states.js',
     'src/project/mock-data.js',

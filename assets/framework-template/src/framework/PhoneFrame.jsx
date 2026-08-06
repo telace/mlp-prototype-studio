@@ -2,8 +2,9 @@ import { ArrowLeft } from 'lucide-react';
 import { getPageShellConfig, pageCopy, pageDirectory } from '../project/project-data.js';
 import { renderPhoneScreen } from '../project/routes.jsx';
 import { TabBar } from '../pages/index.js';
+import AnnotationLayer from './AnnotationLayer.jsx';
 
-export default function PhoneFrame({ page, activeState, setPage, setActiveState, setActiveInteraction, theme }) {
+export default function PhoneFrame({ page, activeState, setPage, setActiveState, setActiveInteraction, theme, annotationMode = 'preview', annotations = [], selectedAnnotationId, onCreateAnnotation, onSelectAnnotation }) {
   const shell = getPageShellConfig(page);
   const shouldCoverStatusbar = shell.secondary && ['sheet', 'modal'].includes(activeState);
   const fallbackPage = pageDirectory.find((item) => item.level !== 'docs')?.id || pageDirectory[0]?.id || 'home';
@@ -21,6 +22,7 @@ export default function PhoneFrame({ page, activeState, setPage, setActiveState,
         {renderPhoneScreen({ page, activeState, setPage, setActiveState, setActiveInteraction })}
       </div>
       {shell.showTabBar ? <TabBar active={page} setPage={setPage} setActiveState={setActiveState} setActiveInteraction={setActiveInteraction} /> : null}
+      <AnnotationLayer mode={annotationMode} annotations={annotations} selectedId={selectedAnnotationId} onCreate={onCreateAnnotation} onSelect={onSelectAnnotation} />
     </div>
   );
 }

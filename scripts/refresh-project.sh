@@ -24,7 +24,7 @@ if [[ ! -f "$PROJECT_ROOT/package.json" || ! -f "$PROJECT_ROOT/src/styles.css" ]
 fi
 
 echo "Refreshing MLP framework: $PROJECT_ROOT"
-node "$SKILL_ROOT/scripts/sync-framework-guards.mjs" "$PROJECT_ROOT"
+node "$SKILL_ROOT/scripts/sync-framework-full.mjs" "$PROJECT_ROOT"
 
 cd "$PROJECT_ROOT"
 

@@ -1,4 +1,5 @@
 export * from './meta.js';
+export * from './design.js';
 export * from './mock-data.js';
 export * from './directory.js';
 export * from './states.js';

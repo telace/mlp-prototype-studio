@@ -1,8 +1,9 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const toPosix = (file) => relative(root, file).replaceAll('\\', '/');
 const mainPath = resolve(root, 'src/main.jsx');
 const stylesPath = resolve(root, 'src/styles.css');
 const srcRoot = resolve(root, 'src');
@@ -19,12 +20,12 @@ const collectSourceFiles = (dir) => collectFiles(dir, ['.js', '.jsx']);
 const collectCssFiles = (dir) => collectFiles(dir, ['.css']);
 const sourceFiles = collectSourceFiles(srcRoot);
 const cssFiles = collectCssFiles(srcRoot);
-const usesLayeredArchitecture = sourceFiles.some((file) => relative(root, file) === 'src/app/App.jsx');
+const usesLayeredArchitecture = sourceFiles.some((file) => toPosix(file) === 'src/app/App.jsx');
 const main = sourceFiles
-  .map((file) => `\n/* ${relative(root, file)} */\n${readFileSync(file, 'utf8')}`)
+  .map((file) => `\n/* ${toPosix(file)} */\n${readFileSync(file, 'utf8')}`)
   .join('\n');
 const styles = cssFiles
-  .map((file) => `\n/* ${relative(root, file)} */\n${readFileSync(file, 'utf8')}`)
+  .map((file) => `\n/* ${toPosix(file)} */\n${readFileSync(file, 'utf8')}`)
   .join('\n');
 const rootStyles = readFileSync(stylesPath, 'utf8');
 const pathExists = (relPath) => {
@@ -82,9 +83,9 @@ const dynamicSourceIds = dynamicSourceCandidates.filter((id) => {
 
 const documentedIds = extractDocumentedIds(main);
 const expectedDocumentedIds = uniq([...extractBoundIds(main), ...documentedIds, ...dynamicSourceIds]);
-
-const missingNotes = expectedDocumentedIds.filter((id) => !documentedIds.includes(id));
-const missingSource = documentedIds.filter((id) => !expectedDocumentedIds.includes(id));
+const generatedDocsPresent = documentedIds.length > 0;
+const missingNotes = [];
+const missingSource = [];
 
 function findStyleFindings(css) {
   const checks = [
@@ -147,6 +148,101 @@ const styleErrors = styleFindings.filter((finding) => finding.level === 'error')
 const styleWarnings = styleFindings.filter((finding) => finding.level === 'warn');
 const hardcodedAppColors = findHardcodedAppColors(styles);
 
+function findRawPageColors() {
+  const pageFiles = [...cssFiles, ...sourceFiles]
+    .filter((file) => {
+      const rel = toPosix(file);
+      return rel.startsWith('src/pages/') || rel === 'src/project/project.css';
+    });
+  const colorPattern = /(?:#[0-9a-fA-F]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\))/g;
+  return pageFiles.flatMap((file) => {
+    const source = readFileSync(file, 'utf8');
+    return [...source.matchAll(colorPattern)].map((match) => ({
+      file: toPosix(file),
+      line: countLinesBefore(source, match.index || 0),
+      value: match[0]
+    }));
+  });
+}
+
+const rawPageColors = findRawPageColors();
+const designContractPath = resolve(root, 'src/project/design.js');
+const designContractSource = pathExists('src/project/design.js') ? readFileSync(designContractPath, 'utf8') : '';
+const projectDataSource = pathExists('src/project/project-data.js')
+  ? readFileSync(resolve(root, 'src/project/project-data.js'), 'utf8')
+  : '';
+const designContractChecks = [
+  ['designContract export', /export\s+const\s+designContract\s*=/],
+  ['mobile C-end platform', /platform:\s*['"]mobile-c-end['"]/],
+  ['fidelity declaration', /fidelity:\s*['"](?:low-fi|mid-fi|high-fi)['"]/],
+  ['audience field', /audience\s*:/],
+  ['job field', /job\s*:/],
+  ['business goal field', /businessGoal\s*:/],
+  ['experience goal field', /experienceGoal\s*:/],
+  ['reference field', /reference\s*:/],
+  ['content priority field', /contentPriority\s*:/],
+  ['palette policy', /palette\s*:/],
+  ['semantic token source', /tokenSource:\s*['"]src\/framework\/framework\.css['"]/]
+];
+const missingDesignContractChecks = designContractChecks
+  .filter(([, pattern]) => !pattern.test(designContractSource))
+  .map(([label]) => label);
+const designContractExportMissing = !projectDataSource.includes("export * from './design.js';");
+const designBriefPlaceholder = /Define the (?:primary user|core task|product outcome|one priority)/.test(designContractSource);
+let designContractRuntime = null;
+let designContractLoadError = '';
+if (pathExists('src/project/design.js')) {
+  try {
+    designContractRuntime = (await import(`${pathToFileURL(designContractPath).href}?review=${Date.now()}`)).designContract;
+  } catch (error) {
+    designContractLoadError = error.message;
+  }
+}
+const designBriefRuntimeFailures = isFrameworkTemplate ? [] : [
+  designContractLoadError ? `design.js load failed: ${designContractLoadError}` : '',
+  designContractRuntime?.status !== 'ready' ? "status must be 'ready'" : '',
+  !['low-fi', 'mid-fi', 'high-fi'].includes(designContractRuntime?.fidelity) ? 'invalid fidelity' : '',
+  designContractRuntime?.platform !== 'mobile-c-end' ? 'platform must be mobile-c-end' : '',
+  ...['audience', 'job', 'businessGoal', 'experienceGoal', 'reference'].map((field) => {
+    const value = designContractRuntime?.[field];
+    return !value || /^Define |^Record /.test(value) ? `${field} is not configured` : '';
+  }),
+  !Array.isArray(designContractRuntime?.contentPriority) || designContractRuntime.contentPriority.length === 0
+    ? 'contentPriority must contain at least one item'
+    : '',
+  !['safe', 'focused', 'exploratory'].includes(designContractRuntime?.direction) ? 'invalid selected direction' : '',
+  !['grayscale', 'brand-accent'].includes(designContractRuntime?.palette?.mode) ? 'invalid palette mode' : '',
+  designContractRuntime?.palette?.mode === 'grayscale' && designContractRuntime?.palette?.accent !== 'none'
+    ? 'grayscale mode must use accent none'
+    : ''
+].filter(Boolean);
+
+function findForbiddenPageTokens() {
+  const allowed = new Set([
+    '--app-bg', '--app-bg-deep', '--surface-1', '--surface-2', '--surface-3', '--placeholder',
+    '--border', '--border-strong', '--border-bright', '--text-strong', '--text-muted', '--text-soft',
+    '--inverse-bg', '--inverse-text', '--topbar-bg', '--tabbar-bg', '--tabbar-border',
+    '--tabbar-active-bg', '--tabbar-active-text', '--drawer-scrim', '--action-primary-text',
+    '--radius-none', '--radius-icon', '--radius-card', '--radius-control', '--radius-panel', '--radius-sheet',
+    '--radius-modal', '--radius-pill', '--radius-circle', '--space-page-x', '--space-section',
+    '--space-section-lg', '--space-list', '--space-inline', '--space-card', '--space-card-lg',
+    '--line', '--line-width'
+  ]);
+  return cssFiles
+    .filter((file) => {
+      const rel = toPosix(file);
+      return rel.startsWith('src/pages/') || rel === 'src/project/project.css';
+    })
+    .flatMap((file) => {
+      const source = readFileSync(file, 'utf8');
+      return [...source.matchAll(/var\((--[a-z0-9-]+)/gi)]
+        .filter((match) => !allowed.has(match[1]))
+        .map((match) => ({ file: toPosix(file), line: countLinesBefore(source, match.index || 0), token: match[1] }));
+    });
+}
+
+const forbiddenPageTokens = findForbiddenPageTokens();
+
 function findWorkspaceThemeLeaks(css) {
   const findings = [];
   const workspaceSelectorPattern = /(?:^|,)\s*(?::root|body|\.app-shell|\.workspace|\.project-settings-rail|\.left-rail|\.project-card|\.theme-card|\.theme-toggle|\.segmented-toggle|\.guide-settings-card|\.page-directory|\.directory|\.spec-panel|\.checklist-stage|\.ui-spec-stage|\.prototype-state-switch)\b/;
@@ -186,7 +282,7 @@ function findPhoneWorkspaceTokenLeaks(css) {
 }
 
 const pagesRootFiles = sourceFiles
-  .map((file) => relative(root, file))
+  .map((file) => toPosix(file))
   .filter((file) => /^src\/pages\/[^/]+\.jsx?$/.test(file));
 const allowedPagesRootFiles = new Set(['src/pages/index.js', 'src/pages/AiToolScreens.jsx']);
 const unexpectedRootPageFiles = usesLayeredArchitecture ? pagesRootFiles.filter((file) => !allowedPagesRootFiles.has(file)) : [];
@@ -196,6 +292,7 @@ const monolithicAiToolScreens = /function\s+\w+Screen\s*\(/.test(aiToolScreensCo
 
 const requiredProjectDataFiles = [
   'src/project/meta.js',
+  'src/project/design.js',
   'src/project/directory.js',
   'src/project/states.js',
   'src/project/mock-data.js',
@@ -247,7 +344,7 @@ const requiredShellChecks = [
   { label: 'small-screen single-column workspace', source: styles, snippet: '@media (max-width: 1180px)' },
   { label: 'small-screen settings rail stacks safely', source: styles, snippet: '.project-settings-rail {\n    grid-template-columns: repeat(4, minmax(0, 1fr));' },
   { label: 'narrow-screen settings rail single column', source: styles, snippet: '@media (max-width: 680px)' },
-  { label: 'phone scales on very narrow screens', source: styles, snippet: '.phone,\n  .prototype-state-switch {\n    transform: scale(.92);' },
+  { label: 'phone scales on very narrow screens', source: styles, snippet: '.phone,\n  .prototype-stage-toolbar {\n    transform: scale(.92);' },
   { label: 'project settings rail exists', source: main, snippet: 'className="project-settings-rail"' },
   { label: 'Product Notes page explanation tab', source: main, snippet: "label: '页面说明'" },
   { label: 'Product Notes element inventory section', source: main, snippet: '页面元素列表' },
@@ -270,6 +367,8 @@ const requiredShellChecks = [
   { label: 'primary viewport sizing class', source: styles, snippet: '.screen--primary' },
   { label: 'secondary viewport sizing class', source: styles, snippet: '.screen--secondary' },
   { label: 'secondary status bar follows topbar', source: styles, snippet: '.phone[data-page-level="secondary"] .statusbar' },
+  { label: 'direct phone page fills viewport', source: styles, snippet: '.screen > .app-page' },
+  { label: 'direct phone page minimum height', source: styles, snippet: 'min-height: 100%;' },
   { label: 'theme switch is an independent card', source: main, snippet: 'className="theme-card"' },
   { label: 'directory has internal scroll area', source: main, snippet: 'className="directory-scroll"' },
   { label: 'fixed wider Product Notes width', source: styles, snippet: '--workspace-notes-width: 546px;' },
@@ -406,7 +505,7 @@ function findUndefinedLocalReferences(file, text) {
 
 const undefinedReferenceFindings = sourceFiles.flatMap((file) => findUndefinedLocalReferences(file, readFileSync(file, 'utf8')));
 
-const pageSourceFiles = sourceFiles.filter((file) => relative(root, file).startsWith('src/pages/') && ['.js', '.jsx'].includes(extname(file)));
+const pageSourceFiles = sourceFiles.filter((file) => toPosix(file).startsWith('src/pages/') && ['.js', '.jsx'].includes(extname(file)));
 const broadImportFindings = pageSourceFiles.flatMap((file) => {
   const text = readFileSync(file, 'utf8');
   const findings = [];
@@ -440,7 +539,7 @@ const rawOverlayFindings = pageSourceFiles.flatMap((file) => {
 });
 
 const legacyOverlayCssFindings = cssFiles.flatMap((file) => {
-  const rel = relative(root, file);
+  const rel = toPosix(file);
   const text = readFileSync(file, 'utf8');
   if (rel === 'src/prototype-ui/patterns.css') return [];
   const forbiddenSelectors = [
@@ -487,31 +586,55 @@ const pageCssFrameworkLeakFindings = pathExists('src/pages/styles/pages.css')
     })()
   : [];
 
-const prototypeUiUsageFindings = [];
+const prototypeUiUsageFindings = pageSourceFiles.flatMap((file) => {
+  const source = readFileSync(file, 'utf8');
+  const findings = [];
+  for (const match of source.matchAll(/<(button|input|textarea|select)\b/g)) {
+    findings.push(`${toPosix(file)}:${countLinesBefore(source, match.index || 0)} 使用原生 <${match[1]}>，应使用 prototype-ui 原语`);
+  }
+  const hasInteractivePrimitive = /<(?:Button|IconButton|Pressable|TextInput|TextArea|Checkbox|SegmentedControl|ChipScroller|BottomTabBar)\b/.test(source);
+  const importsPrototypeUi = /from\s+['"][^'"]*prototype-ui\/components\/index\.jsx['"]/.test(source);
+  if (hasInteractivePrimitive && !importsPrototypeUi) findings.push(`${toPosix(file)} 使用交互原语但未从 prototype-ui 导入`);
+  return findings;
+});
 
 const requiredNotesRules = [
-  { label: 'project test case builder module', source: main, snippet: 'src/project/test-cases/index.js' },
-  { label: 'state-specific interaction resolver', source: main, snippet: 'resolvePageStateInteractions' },
-  { label: 'current state id supports state/stateId', source: main, snippet: "ctx.state || ctx.stateId || 'default'" },
-  { label: 'per-interaction test case builder', source: main, snippet: 'export const buildInteractionTestCases = (item, index, stateNumber, ctx) => {' },
-  { label: 'test cases carry interaction id', source: main, snippet: 'interactionId: item.id' },
-  { label: 'functional test case group', source: main, snippet: "group: '功能测试'" },
-  { label: 'boundary test case group', source: main, snippet: "group: '边界测试'" },
-  { label: 'exception test case group', source: main, snippet: "group: '异常测试'" },
-  { label: 'permission test case group', source: main, snippet: "group: '权限测试'" },
-  { label: 'tracking test case group', source: main, snippet: "group: '埋点测试'" },
-  { label: 'test cases rendered as separate panel', source: main, snippet: "panelMode === 'tests'" },
-  { label: 'test cases rendered per interaction element', source: main, snippet: 'testcase-interaction-card' },
-  { label: 'test cases reuse connector anchor ids', source: main, snippet: 'id={`interaction-${item.id}`}' },
-  { label: 'test case cards expose interaction ids', source: main, snippet: 'data-interaction-id={testCase.interactionId}' },
-  { label: 'test cases built from current state interactions', source: main, snippet: 'buildInteractionTestCases(item, index, stateNumber, ctx)' },
-  { label: 'test case compact card style', source: styles, snippet: '.test-case-card.compact' }
+  { label: 'manual annotation panel', source: main, snippet: 'AnnotationPanel' },
+  { label: 'phone annotation layer', source: main, snippet: 'AnnotationLayer' },
+  { label: 'element anchor mode', source: main, snippet: "anchorType: 'element'" },
+  { label: 'coordinate anchor mode', source: main, snippet: "anchorType: 'coordinate'" },
+  { label: 'one-shot annotation reset', source: main, snippet: "setAnnotationMode('preview')" },
+  { label: 'single-use element add action', source: main, snippet: '添加元素标注' },
+  { label: 'single-use coordinate add action', source: main, snippet: '添加坐标标注' },
+  { label: 'manual annotation storage', source: viteConfig, snippet: "target === 'annotation'" },
+  { label: 'annotation overlay styles', source: styles, snippet: '.annotation-layer' },
+  { label: 'annotation read-only detail', source: main, snippet: 'annotation-detail' },
+  { label: 'annotation explicit edit action', source: main, snippet: 'setEditing(true)' },
+  { label: 'annotation discard action', source: main, snippet: 'discard' },
+  { label: 'annotation creation state notice', source: main, snippet: '新增标注' },
+  { label: 'static annotation bundle', source: main, snippet: 'bundledLocalEdits' },
+  { label: 'annotation acceptance command', source: JSON.stringify(packageJson), snippet: 'mlp:annotation-acceptance' }
 ];
+const requiredScreenshotRules = [
+  { label: 'prototype screenshot action', source: main, snippet: 'copyPrototypeScreenshot' },
+  { label: 'prototype screenshot renderer', source: main, snippet: "from 'html2canvas'" },
+  { label: 'prototype screenshot logical resolution', source: main, snippet: 'scale: 1' },
+  { label: 'prototype screenshot fixed width', source: main, snippet: 'width: 375' },
+  { label: 'prototype screenshot expands long pages', source: main, snippet: 'data-mlp-screenshot-expand' },
+  { label: 'prototype screenshot removes phone frame', source: main, snippet: "borderRadius: '0'" },
+  { label: 'prototype screenshot excludes annotations', source: main, snippet: "querySelector('.annotation-layer')" },
+  { label: 'image clipboard write', source: main, snippet: 'new ClipboardItem' },
+  { label: 'prototype screenshot dependency', source: JSON.stringify(packageJson), snippet: 'html2canvas' },
+  { label: 'prototype screenshot button style', source: styles, snippet: '.prototype-copy-button' },
+  { label: 'prototype screenshot button phone alignment', source: styles, snippet: '.prototype-copy-button {\n  position: absolute;\n  top: 6px;\n  left: 0;' }
+];
+const missingScreenshotRules = requiredScreenshotRules.filter((rule) => !rule.source.includes(rule.snippet));
 const missingNotesRules = requiredNotesRules.filter((rule) => !rule.source.includes(rule.snippet));
 const forbiddenNotesRules = [
-  { label: 'test cases embedded inside interaction card', source: main, snippet: '<div className="interaction-testcases">' },
-  { label: 'test cases redundant intro copy', source: main, snippet: '测试用例按当前页面状态和交互元素生成' },
-  { label: 'test cases redundant inner heading', source: main, snippet: '<h3>Test Cases</h3>' }
+  { label: 'editable annotation kind selector', source: main, snippet: 'setDraft({ ...draft, kind:' },
+  { label: 'persistent annotation mode switch', source: main, snippet: 'annotation-mode-control' },
+  { label: 'element mode coordinate fallback', source: main, snippet: "if (!target) {\n        onCreate({ anchorType: 'coordinate'" },
+  { label: 'decorative annotation panel title icon', source: main, snippet: '<MessageSquareText' }
 ].filter((rule) => rule.source.includes(rule.snippet));
 
 const reviewSteps = [
@@ -528,14 +651,14 @@ const reviewSteps = [
     detail: missingProjectDataFiles.length ? `缺少: ${missingProjectDataFiles.join(', ')}` : 'project 数据已按 meta/directory/states/mock-data/routing/notes/test-cases 分层'
   },
   {
-    name: '交互说明覆盖',
-    pass: missingNotes.length === 0,
-    detail: missingNotes.length ? `缺少 Product Notes: ${missingNotes.join(', ')}` : `已覆盖 ${documentedIds.length} 个说明 ID`
+    name: '自动交互文档关闭',
+    pass: !generatedDocsPresent,
+    detail: generatedDocsPresent ? `仍发现 ${documentedIds.length} 条预生成交互说明` : '未预填自动交互说明，使用人工标注数据'
   },
   {
-    name: '元素连接来源',
-    pass: missingSource.length === 0,
-    detail: missingSource.length ? `说明无来源元素: ${missingSource.join(', ')}` : `已匹配 ${expectedDocumentedIds.length} 个连接来源`
+    name: '可标注元素来源',
+    pass: expectedDocumentedIds.length > 0,
+    detail: expectedDocumentedIds.length ? `发现 ${expectedDocumentedIds.length} 个稳定元素锚点来源` : '没有发现 bindInteraction/bindElement 元素来源'
   },
   {
     name: 'UI 异常扫描',
@@ -582,11 +705,18 @@ const reviewSteps = [
     detail: forbiddenLegacyShell.length ? `禁止项: ${forbiddenLegacyShell.map((item) => item.label).join(', ')}` : '未保留旧 Product Notes 引导开关或目录底部主题入口'
   },
   {
-    name: '交互测试用例结构',
+    name: '人工标注结构',
     pass: missingNotesRules.length === 0 && forbiddenNotesRules.length === 0,
     detail: missingNotesRules.length || forbiddenNotesRules.length
       ? `缺少: ${missingNotesRules.map((rule) => rule.label).join(', ')}；禁止项: ${forbiddenNotesRules.map((rule) => rule.label).join(', ')}`
-      : '测试用例已从交互说明中拆分为右侧独立面板'
+      : '元素锚点、坐标锚点、本地存储、静态数据打包与标注面板均已接入'
+  },
+  {
+    name: '原型截图复制',
+    pass: missingScreenshotRules.length === 0,
+    detail: missingScreenshotRules.length
+      ? `缺少: ${missingScreenshotRules.map((rule) => rule.label).join(', ')}`
+      : '当前手机原型可渲染为 PNG 并复制到系统剪贴板'
   },
   {
     name: '页面样式模块化',
@@ -614,8 +744,24 @@ const reviewSteps = [
   },
   {
     name: 'App 配色 token 化',
-    pass: hardcodedAppColors.length === 0,
-    detail: hardcodedAppColors.length ? `${hardcodedAppColors.length} 处 App 原型内部硬编码色值` : '手机 App 原型内部配色已使用全局变量'
+    pass: hardcodedAppColors.length === 0 && rawPageColors.length === 0,
+    detail: hardcodedAppColors.length || rawPageColors.length
+      ? `${hardcodedAppColors.length} 处 App 原型内部硬编码色值，${rawPageColors.length} 处业务页面原始色值`
+      : '手机 App 业务页面只使用语义化设计 token'
+  },
+  {
+    name: '项目设计契约',
+    pass: missingDesignContractChecks.length === 0 && !designContractExportMissing && designBriefRuntimeFailures.length === 0,
+    detail: missingDesignContractChecks.length || designContractExportMissing || designBriefRuntimeFailures.length
+      ? `缺少或无效: ${[...missingDesignContractChecks, designContractExportMissing ? 'project-data design export' : '', ...designBriefRuntimeFailures].filter(Boolean).join(', ')}`
+      : '设计目标、用户任务、参考、方向与色板策略已就绪'
+  },
+  {
+    name: '业务页 token 角色',
+    pass: forbiddenPageTokens.length === 0,
+    detail: forbiddenPageTokens.length
+      ? `${forbiddenPageTokens.length} 处业务页面使用未批准或过细 token`
+      : '业务页面只使用稳定语义 token 子集'
   }
 ];
 
@@ -646,6 +792,23 @@ if (hardcodedAppColors.length) {
   if (hardcodedAppColors.length > 40) {
     console.log(`- ... ${hardcodedAppColors.length - 40} more`);
   }
+}
+
+if (rawPageColors.length) {
+  console.log('\nRaw page colors:');
+  for (const item of rawPageColors.slice(0, 40)) {
+    console.log(`- ${item.file}:${item.line} (${item.value})`);
+  }
+  if (rawPageColors.length > 40) console.log(`- ... ${rawPageColors.length - 40} more`);
+}
+
+if (designBriefPlaceholder && !isFrameworkTemplate) {
+  console.log('\nDesign contract warning: src/project/design.js still contains placeholder brief text.');
+}
+
+if (forbiddenPageTokens.length) {
+  console.log('\nForbidden page tokens:');
+  for (const item of forbiddenPageTokens.slice(0, 40)) console.log(`- ${item.file}:${item.line} (${item.token})`);
 }
 
 if (workspaceThemeLeaks.length) {
@@ -699,6 +862,8 @@ if (undefinedReferenceFindings.length) {
 }
 
 if (
+  generatedDocsPresent ||
+  expectedDocumentedIds.length === 0 ||
   missingNotes.length ||
   missingSource.length ||
   styleErrors.length ||
@@ -723,7 +888,12 @@ if (
   forbiddenShellRules.length ||
   frameworkLayoutFindings.length ||
   undefinedReferenceFindings.length ||
-  hardcodedAppColors.length
+  hardcodedAppColors.length ||
+  rawPageColors.length ||
+  missingDesignContractChecks.length ||
+  designContractExportMissing ||
+  designBriefRuntimeFailures.length ||
+  forbiddenPageTokens.length
 ) {
   process.exitCode = 1;
 }

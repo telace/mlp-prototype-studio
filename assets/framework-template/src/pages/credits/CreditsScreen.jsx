@@ -1,6 +1,6 @@
 import { Coins, ReceiptText } from 'lucide-react';
 import { bindElement, bindInteraction } from '../../framework/interaction.js';
-import { Button, Modal } from '../../prototype-ui/components/index.jsx';
+import { Button, Modal, Pressable } from '../../prototype-ui/components/index.jsx';
 
 const packages = ['600 积分', '1800 积分', '5000 积分'];
 
@@ -17,10 +17,10 @@ export default function CreditsScreen({ activeState, setActiveState, setActiveIn
         <div className="section-head"><h2>充值积分</h2></div>
         <div className="package-grid">
           {packages.map((item, index) => (
-            <button type="button" key={item} className={index === 1 ? 'selected' : ''} {...bindInteraction(`credits-package-${index + 1}`, setActiveInteraction)}>
+            <Pressable key={item} className={index === 1 ? 'selected' : ''} {...bindInteraction(`credits-package-${index + 1}`, setActiveInteraction)}>
               <strong>{item}</strong>
               <span>¥{[6, 18, 45][index]}.00</span>
-            </button>
+            </Pressable>
           ))}
         </div>
         <Button block onClick={() => setActiveState('paying')} {...bindInteraction('credits-pay-button', setActiveInteraction)}>确认充值</Button>

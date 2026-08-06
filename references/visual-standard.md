@@ -36,19 +36,9 @@ Use this standard for mobile C-end low-fidelity prototypes.
 - The workspace must use two separate left rails. The first `project-settings-rail` contains project card, theme card, and interaction guide card; the second left rail contains only the page directory card. The theme switch and `交互引导` switch must be in the project/settings rail, not inside the directory footer or Product Notes panel. Switching theme changes only the phone prototype page colors through variables scoped to the phone canvas. It must not change the workspace background, project card, left directory, prototype state switch, docs pages, Product Notes, page data, page state, Product Notes content, or the UI checklist.
 - Framework shell colors, the phone outer shell, left directory colors, docs page colors, state switch colors, and Product Notes colors are fixed framework styling. Do not bind them to the light/dark prototype theme. Everything outside the phone viewport is framework UI and stays on the fixed bright shell colors. The phone outer shell may use hard-coded black values; App content inside the phone must use global phone theme tokens.
 - Hard-code the framework shell to a bright readable scheme: workspace background `#F5F6F8`; project card, theme card, page directory, Product Notes, UI checklist, UI spec, prompt docs, and component docs panels `#FFFFFF`; muted strips and active note cards `#F3F4F6`; panel borders/separators `#E5E7EB`; muted shell text `#5F6670`; primary shell text `#222222`. Do not replace these with phone variables such as `--app-bg`, `--surface-*`, `--text-strong`, or `--border`.
-- Treat the following dark UI tokens as fixed defaults. Do not invent new colors or sizes during ordinary prototype work:
-  - `--app-bg: #171A1D` for all phone page backgrounds.
-  - `--surface-1: #202326` for primary panels, bottom tabs, cards, form areas, and modal bodies.
-  - `--surface-2: #282B2E` for secondary panels and weak controls.
-  - `--surface-3: #34373A` for filled buttons, selected chips, and stronger controls.
-  - `--placeholder: #5C5F61` for image/video/template/upload placeholders.
-  - `--border: #33373A` for control borders and separators.
-  - `--text-strong: #F4F4F1` for primary text.
-  - `--text-muted: #A7A9A8` for helper text.
-  - `--text-soft: #D5D6D3` for secondary labels.
-  - `--inverse-bg: #F4F4F1` and `--inverse-text: #111111` only for high-emphasis selected controls or primary one-tap login actions.
-  - `--topbar-bg: #202326` for secondary page status bar and top title bar.
-  - `--tabbar-bg: #202326`, `--tabbar-border: #303437`, `--tabbar-active-bg: #F4F4F1`, `--tabbar-active-text: #111111` for the floating bottom navigation.
+- Treat `src/framework/framework.css` as the only source of truth for phone color values. This document defines roles, not duplicate hex values.
+- Business pages may use only the stable semantic subset enforced by `mlp:review`: `--app-bg`, `--surface-1..3`, `--placeholder`, `--border`, `--border-strong`, `--border-bright`, `--text-strong`, `--text-muted`, `--text-soft`, inverse/action tokens, navigation tokens, and the documented spacing/radius tokens.
+- Keep `--surface-4..8`, legacy text variants, and implementation-only tokens private to framework or `prototype-ui`; do not use them in `src/pages/`.
 - Prototype page CSS must define these phone colors as variables in a phone-scoped theme selector such as `.phone[data-theme="light"]` and `.phone[data-theme="dark"]`. Do not use these variables to theme the review workspace shell, left directory, docs pages, or Product Notes.
 - Phone App selectors must not use workspace variables such as `--workspace-bg`, `--workspace-panel`, `--workspace-panel-muted`, `--workspace-panel-border`, `--workspace-panel-text`, `--workspace-panel-muted-text`, or `--workspace-text`. Use the phone theme tokens instead so light/dark mode cannot create unreadable text or mismatched surfaces.
 - Required radius variables:
@@ -68,20 +58,7 @@ Use this standard for mobile C-end low-fidelity prototypes.
 - Required border variable:
   - `--line: 1px solid`
 - Do not use more than these grayscale tokens in the phone UI unless the user explicitly requests a new visual direction.
-- The light theme uses the same framework layout and this light grayscale token set:
-  - `--app-bg: #F6F7F8` for phone page backgrounds.
-  - `--surface-1: #FFFFFF` for primary cards, form areas, bottom tabs, and modal bodies.
-  - `--surface-2: #EEF0F2` for secondary panels and weak controls.
-  - `--surface-3: #E1E4E8` for feature blocks and stronger neutral panels.
-  - `--placeholder: #B7BDC5` for image/video/template/upload placeholders.
-  - `--border: #E0E3E7` for control borders and separators.
-  - `--text-strong: #1F2328` for primary text.
-  - `--text-muted: #667085` for helper text.
-  - `--text-soft: #4B5563` for secondary labels.
-  - Primary actions in light style use `#1F2328` background with `#FFFFFF` text; secondary actions use `#FFFFFF` background with `#E0E3E7` border and `#1F2328` text.
-  - `--topbar-bg: #FFFFFF` for secondary page status bar and top title bar.
-  - `--tabbar-bg: #FFFFFF`, `--tabbar-border: #E1E4E8`, `--tabbar-active-bg: #1F2328`, `--tabbar-active-text: #FFFFFF` for the floating bottom navigation.
-  - Keep all other rules unchanged: no colors, no photos, no gradients, no semi-transparent effects, no dashed wireframes, and the same typography/spacing/radius scale.
+- Light and dark themes must define the same semantic token names. Do not create page-specific theme branches.
 - New projects must not create additional phone color systems. If a project needs a different visual direction, ask the user explicitly before adding any third phone theme or non-grayscale accent.
 - Directory status indicators are the only default color exception: finalized/approved uses blue, adjusting/in-progress uses yellow, and update badges remain small metadata.
 - Do not use semi-transparent fills, blur, glass, glow, gradient, or colorful accents unless explicitly requested.
@@ -151,6 +128,9 @@ Use this standard for mobile C-end low-fidelity prototypes.
 - Use a lighter outlined treatment for secondary actions.
 - Primary page bottom tab navigation must use the shared floating style: `12px` side inset, `10px` bottom inset, `64px` height, `24px` container radius, tokenized background and border, `6px 8px` internal padding, and three equal columns. Each tab button uses `min-height: 52px`, `16px` radius, `11px/15px` label text, and transparent background. The active tab label must remain readable with `--text-strong`; only the icon block uses inverse active tokens. The icon block must be a fixed `30px x 30px` rounded square with `10px` radius and `6px` internal padding. Do not apply `--tabbar-active-text` to the whole active tab button because it can make labels unreadable in dark or light themes.
 - On primary pages with a floating bottom tabbar, do not create a phone-level bottom shell layer, including `.phone:has(.tabbar)::after`. The app viewport background should extend behind the bottom navigation, and the phone shell should remain visible only as the outer black ring.
+- Keep the inner phone canvas visually continuous. For primary pages, the status bar, screen viewport, and direct page root use the same semantic page background. For secondary pages, the status bar matches the locked top bar, while the page root still fills the remaining viewport.
+- The status bar, optional top bar, and screen viewport must cover the full `375 x 812` canvas with no gap or overlap. Every direct `.screen > .app-page` root has `min-height: 100%` and owns a deliberate semantic background.
+- Reject any light status strip over a dark page, dark status strip over a light page, exposed black phone-shell block below the app, or large bottom band caused by a page root shorter than the viewport. Do not disguise these defects with extra padding, pseudo-elements, or page-specific hard-coded colors.
 - Bottom sheets, action sheets, drawers, and blocking modals must include a full-screen background scrim inside the phone canvas. For secondary-page sheets and modals, the scrim must cover the phone system status bar as well as the page content. Use a solid grayscale scrim token such as `--drawer-scrim`; do not use transparent overlays or blur effects.
 - If a secondary-page sheet or modal is mounted inside `.screen` or another clipped content area and cannot physically cover the phone system status bar, add a phone-level status-bar scrim, such as `.phone-status-scrim`, tied to the same open state. It must cover the `44px` status bar area, use the same solid scrim token, and close or return state when tapped.
 - Every visible button inside drawers, sheets, action sheets, and modals must have a defined click result in the prototype. Backdrop/close/cancel controls should close the layer or return to the previous state; primary/confirm/select controls should navigate, update state, or show feedback such as Toast.
@@ -163,7 +143,7 @@ Use this standard for mobile C-end low-fidelity prototypes.
 
 ### Button Tokens
 
-Use these exact button tokens unless the user explicitly approves a different visual system:
+Use the shared `prototype-ui` button variants unless the user explicitly approves a different visual system. `src/framework/framework.css` and `src/prototype-ui/patterns.css` are the implementation source of truth for colors; business pages must use semantic tokens and must not restate raw color values.
 
 - Border width:
   - Standard button/control border: `1px solid`.
@@ -174,49 +154,44 @@ Use these exact button tokens unless the user explicitly approves a different vi
   - Border radius: `12px`.
   - Adjacent button gap: `10px` in a dual action group.
   - Padding: `0 14px`.
-  - Background: `#2A2A2A`.
-  - Border: `1px solid #2A2A2A`.
-  - Text: `#FFFFFF`.
+  - Use the shared primary action color, border, and text tokens.
   - Font: `14px / 17px`, weight `800`.
 - Standard secondary button:
   - Height: `44px` minimum.
   - Border radius: `12px`.
   - Adjacent button gap: `10px` in a dual action group.
   - Padding: `0 14px`.
-  - Background: `#1C1C1C`.
-  - Border: `1px solid #3A3A3A`.
-  - Text: `#F2F2F2`.
+  - Use the shared secondary action color, border, and text tokens.
   - Font: `14px / 17px`, weight `800`.
 - Compact button/chip:
   - Height: `32px`.
   - Border radius: `999px` for chips or `10px` for square-ish controls.
   - Adjacent chip gap: `8px`.
   - Padding: `0 12px`.
-  - Border: `1px solid #3A3A3A` unless selected.
-  - Selected state: background `#F2F2F2`, border `1px solid #F2F2F2`, text `#111111`.
+  - Use the semantic border token unless selected.
+  - Selected state uses the shared selected background, border, and text tokens.
   - Font: `12px / 16px`, weight `800`.
 - Icon button:
   - Size: `32px x 32px` for compact controls, `36px x 36px` for navigation-level controls.
   - Border radius: `10px`.
   - Adjacent icon-button gap: `8px`.
-  - Background: `#222222` or transparent when inside a top bar.
-  - Border: `1px solid #3A3A3A` only when the button needs a visible hit area.
+  - Use the shared icon-button surface token or transparent background inside a top bar.
+  - Use a `1px` semantic border only when the button needs a visible hit area.
   - Icon size: `16-20px` based on control size.
 - Large login/authorization button:
   - Height: `48px`.
   - Border radius: `24px`.
   - Vertical gap between stacked login buttons: `12px`.
   - Padding: `0 16px`.
-  - Primary one-tap variant may use background `#F2F2F2`, border `1px solid #F2F2F2`, text `#111111`.
-  - Secondary login variant uses background `#111111`, border `1px solid #3A3A3A`, text `#F2F2F2`.
+  - Primary and secondary variants use the shared login action tokens.
 - Disabled button:
   - Keep the same size, radius, and border width as the enabled state.
-  - Use lower contrast only: background `#222222`, border `1px solid #3A3A3A`, text `#A8A8A8`.
+  - Use the shared disabled-state tokens and lower contrast only.
 - Flow switch text button:
   - Height: `30px`.
   - Border: `0`.
   - Background: transparent.
-  - Text: `#A8A8A8`.
+  - Text uses the semantic muted-text token.
   - Font: `12px / 16px`, weight `800`.
 - Do not mix pill buttons and rectangular buttons within the same action group. Bottom action groups always use the standard `12px` radius, not pill radius.
 
@@ -244,13 +219,12 @@ Use the accepted content-analysis page bottom action pattern as the standard for
 - For long or form-like secondary pages, split the phone page into `mobile-scroll-with-actions`, `mobile-scroll-content`, and `bottom-action-bar`.
 - `mobile-scroll-with-actions` fills the phone screen and hides outer overflow.
 - `mobile-scroll-content` owns vertical scrolling and leaves only a small bottom buffer.
-- `bottom-action-bar` stays visible at the bottom of the phone page, uses the same page background, and has a top separator `1px solid #2A2A2A`.
+- `bottom-action-bar` stays visible at the bottom of the phone page, uses the same page background, and has a `1px` semantic top separator.
 - Bottom action bar padding is `12px 0 16px`.
 - Single action layout: `bottom-action-bar single`, one full-width primary button.
 - Dual action layout: `bottom-action-bar dual`, grid columns `112px minmax(0, 1fr)`, `10px` gap; secondary on the left, primary on the right.
 - Bottom buttons are not pill buttons: use `min-height: 44px`, `border-radius: 12px`, `font-size: 14px`, `line-height: 1.2`, and `font-weight: 800`.
-- Primary button `bottom-cta`: background `#2A2A2A`, border `#2A2A2A`, text `#FFFFFF`.
-- Secondary button `ghost-cta`: background `#1C1C1C`, border `#3A3A3A`, text `#F2F2F2`.
+- Primary and secondary actions use the corresponding shared `prototype-ui` variants and semantic phone tokens.
 - Do not place bottom actions in ordinary page flow when the page content can scroll. Do not wrap bottom actions in another card.
 
 ## Lists And Cards

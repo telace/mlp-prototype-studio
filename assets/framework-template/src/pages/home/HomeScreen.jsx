@@ -1,6 +1,6 @@
 import { ChevronRight, Coins, Crown, ImagePlus, Play, Sparkles, User } from 'lucide-react';
 import { bindElement, bindInteraction } from '../../framework/interaction.js';
-import { Button, ChipScroller, PlaceholderImage, TemplateCard } from '../../prototype-ui/components/index.jsx';
+import { Button, ChipScroller, PlaceholderImage, Pressable, TemplateCard } from '../../prototype-ui/components/index.jsx';
 
 const groups = [
   { id: 'recommend', label: '推荐' },
@@ -22,30 +22,30 @@ export default function HomeScreen({ setPage, setActiveState, setActiveInteracti
       <header className="home-hero" {...bindElement('home-hero', setActiveInteraction)}>
         <span className="eyebrow">AI CREATION</span>
         <h1>开始创作</h1>
-        <button type="button" className="member-mini" onClick={() => go('member', 'android')} {...bindInteraction('home-member-entry', setActiveInteraction)}>
+        <Pressable className="member-mini" onClick={() => go('member', 'android')} {...bindInteraction('home-member-entry', setActiveInteraction)}>
           <Crown size={14} />
           会员
-        </button>
+        </Pressable>
       </header>
 
       <section className="quick-grid" aria-label="功能入口">
-        <button type="button" className="quick-card quick-card--main" onClick={() => go('aiVideo')} {...bindInteraction('home-ai-video-entry', setActiveInteraction)}>
+        <Pressable className="quick-card quick-card--main" onClick={() => go('aiVideo')} {...bindInteraction('home-ai-video-entry', setActiveInteraction)}>
           <Sparkles size={28} />
           <strong>AI 视频</strong>
           <span>上传图片生成短片</span>
-        </button>
-        <button type="button" className="quick-card" onClick={() => go('works')} {...bindInteraction('home-works-entry', setActiveInteraction)}>
+        </Pressable>
+        <Pressable className="quick-card" onClick={() => go('works')} {...bindInteraction('home-works-entry', setActiveInteraction)}>
           <Play size={18} />
           <strong>作品</strong>
-        </button>
-        <button type="button" className="quick-card" onClick={() => go('credits')} {...bindInteraction('home-credits-entry', setActiveInteraction)}>
+        </Pressable>
+        <Pressable className="quick-card" onClick={() => go('credits')} {...bindInteraction('home-credits-entry', setActiveInteraction)}>
           <Coins size={18} />
           <strong>积分</strong>
-        </button>
-        <button type="button" className="quick-card" onClick={() => go('profile')} {...bindInteraction('home-profile-entry', setActiveInteraction)}>
+        </Pressable>
+        <Pressable className="quick-card" onClick={() => go('profile')} {...bindInteraction('home-profile-entry', setActiveInteraction)}>
           <User size={18} />
           <strong>我的</strong>
-        </button>
+        </Pressable>
       </section>
 
       <section className="banner-strip" {...bindInteraction('home-activity-banner', setActiveInteraction)}>
@@ -79,17 +79,17 @@ export default function HomeScreen({ setPage, setActiveState, setActiveInteracti
       <section className="home-section">
         <div className="section-head">
           <h2>最近作品</h2>
-          <button type="button" className="text-link" onClick={() => go('works')} {...bindInteraction('home-recent-more', setActiveInteraction)}>查看全部</button>
+          <Pressable className="text-link" onClick={() => go('works')} {...bindInteraction('home-recent-more', setActiveInteraction)}>查看全部</Pressable>
         </div>
         <div className="recent-row">
           {[0, 1, 2].map((item) => (
-            <button type="button" key={item} className="recent-item" onClick={() => go('workDetail', item === 0 ? 'generating' : 'success')} {...bindInteraction(`home-recent-${item + 1}`, setActiveInteraction)}>
+            <Pressable key={item} className="recent-item" onClick={() => go('workDetail', item === 0 ? 'generating' : 'success')} {...bindInteraction(`home-recent-${item + 1}`, setActiveInteraction)}>
               <PlaceholderImage ratio="1 / 1" tone={item} video={item !== 1} />
-            </button>
+            </Pressable>
           ))}
-          <button type="button" className="recent-item recent-upload" onClick={() => go('aiVideo')} {...bindInteraction('home-upload-shortcut', setActiveInteraction)}>
+          <Pressable className="recent-item recent-upload" onClick={() => go('aiVideo')} {...bindInteraction('home-upload-shortcut', setActiveInteraction)}>
             <ImagePlus size={22} />
-          </button>
+          </Pressable>
         </div>
       </section>
     </section>

@@ -79,10 +79,15 @@
 }
 
 .mlp-button,
-.mlp-icon-button {
+.mlp-icon-button,
+.mlp-pressable {
   border: var(--line) var(--border);
   box-shadow: none;
   cursor: pointer;
+  font: inherit;
+}
+
+.mlp-pressable {
   font: inherit;
 }
 
@@ -320,7 +325,9 @@
 }
 
 .mlp-form-field__control input,
-.mlp-form-field__control textarea {
+.mlp-form-field__control textarea,
+.mlp-text-input,
+.mlp-text-area {
   min-width: 0;
   width: 100%;
   border: 0;
@@ -328,6 +335,24 @@
   background: transparent;
   color: var(--text-strong);
   font: inherit;
+}
+
+.mlp-checkbox {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-inline);
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+}
+
+.mlp-checkbox input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--inverse-bg);
 }
 
 .mlp-form-field__action {

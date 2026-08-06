@@ -85,85 +85,83 @@
 }
 
 .phone[data-theme="dark"] {
-  --app-bg: #171A1D;
-  --app-bg-deep: #101214;
+  --app-bg: #171717;
+  --app-bg-deep: #101010;
   --app-shell-dark: #080808;
   --app-shell-ring: #1A1A1A;
-  --workspace-text: #202326;
-  --surface-1: #202326;
-  --surface-2: #282B2E;
-  --surface-3: #34373A;
-  --surface-4: #3E4144;
-  --surface-5: #4A4D50;
-  --surface-6: #5A5D60;
-  --surface-7: #6D7072;
-  --surface-8: #7C7F81;
-  --placeholder: #5C5F61;
-  --border: #33373A;
-  --border-strong: #494D50;
-  --border-stronger: #63676A;
-  --border-bright: #83878A;
-  --text-strong: #F4F4F1;
-  --text-muted: #A7A9A8;
-  --text-soft: #D5D6D3;
-  --text-subtle: #B9BBB9;
-  --text-light-muted: #8B8E8E;
-  --text-light-soft: #787B7C;
-  --text-secondary-light: #E9E9E5;
-  --inverse-bg: #F4F4F1;
+  --surface-1: #202020;
+  --surface-2: #282828;
+  --surface-3: #343434;
+  --surface-4: #3E3E3E;
+  --surface-5: #4A4A4A;
+  --surface-6: #5A5A5A;
+  --surface-7: #6D6D6D;
+  --surface-8: #7C7C7C;
+  --placeholder: #5C5C5C;
+  --border: #343434;
+  --border-strong: #4A4A4A;
+  --border-stronger: #646464;
+  --border-bright: #848484;
+  --text-strong: #F4F4F4;
+  --text-muted: #A8A8A8;
+  --text-soft: #D6D6D6;
+  --text-subtle: #BABABA;
+  --text-light-muted: #8C8C8C;
+  --text-light-soft: #787878;
+  --text-secondary-light: #EAEAEA;
+  --inverse-bg: #F4F4F4;
   --inverse-text: #111111;
   --inverse-border: #D6D6D6;
   --inverse-border-soft: #CFCFCF;
   --inverse-surface: #FFFFFF;
   --inverse-page: #F7F7F7;
   --action-primary-text: #FFFFFF;
-  --topbar-bg: #202326;
-  --tabbar-bg: #202326;
-  --tabbar-border: #303437;
-  --tabbar-active-bg: #F4F4F1;
+  --topbar-bg: #202020;
+  --tabbar-bg: #202020;
+  --tabbar-border: #303030;
+  --tabbar-active-bg: #F4F4F4;
   --tabbar-active-text: #111111;
-  --drawer-scrim: #34373A;
+  --drawer-scrim: #343434;
 }
 
 .phone[data-theme="light"] {
-  --app-bg: #F6F7F8;
+  --app-bg: #F7F7F7;
   --app-bg-deep: #FFFFFF;
   --app-shell-dark: #080808;
   --app-shell-ring: #1A1A1A;
-  --workspace-text: #FFFFFF;
   --surface-1: #FFFFFF;
-  --surface-2: #EEF0F2;
-  --surface-3: #E1E4E8;
-  --surface-4: #D6DADE;
-  --surface-5: #C9CED4;
-  --surface-6: #B8BEC6;
-  --surface-7: #A8B0B8;
-  --surface-8: #949DA8;
-  --placeholder: #B7BDC5;
-  --border: #E0E3E7;
-  --border-strong: #C9CED4;
-  --border-stronger: #AEB6C0;
-  --border-bright: #8F99A5;
-  --text-strong: #1F2328;
-  --text-muted: #667085;
-  --text-soft: #4B5563;
-  --text-subtle: #7A828C;
-  --text-light-muted: #73736D;
-  --text-light-soft: #5B5B56;
-  --text-secondary-light: #2F343A;
-  --inverse-bg: #1F2328;
+  --surface-2: #EFEFEF;
+  --surface-3: #E2E2E2;
+  --surface-4: #D8D8D8;
+  --surface-5: #CCCCCC;
+  --surface-6: #BDBDBD;
+  --surface-7: #ADADAD;
+  --surface-8: #999999;
+  --placeholder: #B8B8B8;
+  --border: #E0E0E0;
+  --border-strong: #CCCCCC;
+  --border-stronger: #B0B0B0;
+  --border-bright: #909090;
+  --text-strong: #202020;
+  --text-muted: #686868;
+  --text-soft: #4C4C4C;
+  --text-subtle: #7C7C7C;
+  --text-light-muted: #747474;
+  --text-light-soft: #5C5C5C;
+  --text-secondary-light: #303030;
+  --inverse-bg: #202020;
   --inverse-text: #FFFFFF;
-  --inverse-border: #1F2328;
+  --inverse-border: #202020;
   --inverse-border-soft: #3C3C38;
-  --inverse-surface: #262B31;
-  --inverse-page: #1F2328;
+  --inverse-surface: #282828;
+  --inverse-page: #202020;
   --action-primary-text: #FFFFFF;
   --topbar-bg: #FFFFFF;
   --tabbar-bg: #FFFFFF;
-  --tabbar-border: #E1E4E8;
-  --tabbar-active-bg: #1F2328;
+  --tabbar-border: #E2E2E2;
+  --tabbar-active-bg: #202020;
   --tabbar-active-text: #FFFFFF;
-  --drawer-scrim: #D6DADE;
+  --drawer-scrim: #D8D8D8;
 }
 
 * {
@@ -686,6 +684,11 @@ button {
   padding-bottom: 0;
   overflow-y: auto;
   scrollbar-width: none;
+  background: var(--app-bg);
+}
+
+.screen > .app-page {
+  min-height: 100%;
   background: var(--app-bg);
 }
 
@@ -6298,6 +6301,54 @@ body,
   line-height: 1.45;
 }
 
+.prototype-stage-toolbar {
+  position: relative;
+  width: 375px;
+  min-height: 42px;
+}
+
+.prototype-copy-button {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #E5E7EB;
+  border-radius: var(--radius-icon);
+  background: #FFFFFF;
+  color: #222222;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+}
+
+.prototype-copy-button:hover {
+  background: #F3F4F6;
+}
+
+.prototype-copy-button:focus-visible {
+  outline: 2px solid #222222;
+  outline-offset: 2px;
+}
+
+.prototype-copy-button.is-copied {
+  background: #222222;
+  border-color: #222222;
+  color: #FFFFFF;
+}
+
+.prototype-copy-button.is-error {
+  border-color: #991B1B;
+  color: #991B1B;
+}
+
+.prototype-copy-button:disabled {
+  cursor: wait;
+  opacity: .7;
+}
+
 .prototype-state-switch {
   --state-switch-edge-space: 150px;
   width: 375px;
@@ -6615,45 +6666,45 @@ body,
 }
 
 .phone[data-theme="dark"] {
-  --app-bg: #171A1D;
-  --surface-1: #202326;
-  --surface-2: #282B2E;
-  --surface-3: #34373A;
-  --placeholder: #5C5F61;
-  --border: #33373A;
-  --text-strong: #F4F4F1;
-  --text-muted: #A7A9A8;
-  --text-soft: #D5D6D3;
-  --text-subtle: #B9BBB9;
-  --inverse-bg: #F4F4F1;
+  --app-bg: #171717;
+  --surface-1: #202020;
+  --surface-2: #282828;
+  --surface-3: #343434;
+  --placeholder: #5C5C5C;
+  --border: #343434;
+  --text-strong: #F4F4F4;
+  --text-muted: #A8A8A8;
+  --text-soft: #D5D5D5;
+  --text-subtle: #B9B9B9;
+  --inverse-bg: #F4F4F4;
   --inverse-text: #111111;
   --action-primary-text: #FFFFFF;
-  --topbar-bg: #202326;
-  --tabbar-bg: #202326;
-  --tabbar-border: #303437;
-  --tabbar-active-bg: #F4F4F1;
+  --topbar-bg: #202020;
+  --tabbar-bg: #202020;
+  --tabbar-border: #303030;
+  --tabbar-active-bg: #F4F4F4;
   --tabbar-active-text: #111111;
   --drawer-scrim: #111111;
 }
 
 .phone[data-theme="light"] {
-  --app-bg: #F6F7F8;
+  --app-bg: #F7F7F7;
   --surface-1: #FFFFFF;
-  --surface-2: #EEF0F2;
-  --surface-3: #E1E4E8;
-  --placeholder: #B7BDC5;
-  --border: #E0E3E7;
-  --text-strong: #1F2328;
-  --text-muted: #667085;
-  --text-soft: #4B5563;
-  --text-subtle: #667085;
-  --inverse-bg: #1F2328;
+  --surface-2: #EEEEEE;
+  --surface-3: #E2E2E2;
+  --placeholder: #B8B8B8;
+  --border: #E0E0E0;
+  --text-strong: #202020;
+  --text-muted: #686868;
+  --text-soft: #4C4C4C;
+  --text-subtle: #686868;
+  --inverse-bg: #202020;
   --inverse-text: #FFFFFF;
   --action-primary-text: #FFFFFF;
   --topbar-bg: #FFFFFF;
   --tabbar-bg: #FFFFFF;
-  --tabbar-border: #E1E4E8;
-  --tabbar-active-bg: #1F2328;
+  --tabbar-border: #E2E2E2;
+  --tabbar-active-bg: #202020;
   --tabbar-active-text: #FFFFFF;
   --drawer-scrim: #1F2328;
 }
@@ -6679,6 +6730,12 @@ body,
   position: relative;
   z-index: 0;
   height: calc(var(--phone-h, 812px) - var(--statusbar-h, 44px));
+  background: var(--app-bg);
+}
+
+.screen > .app-page {
+  min-height: 100%;
+  background: var(--app-bg);
 }
 
 .screen--primary {
@@ -6708,7 +6765,7 @@ body,
 .phone[data-theme] .member-center-screen,
 .phone[data-theme] .points-center-screen,
 .phone[data-theme] .result-screen {
-  background: var(--surface-2);
+  background: var(--app-bg);
   color: var(--text-strong);
 }
 
@@ -6836,7 +6893,7 @@ body,
   }
 
   .phone,
-  .prototype-state-switch {
+  .prototype-stage-toolbar {
     transform: scale(.92);
     transform-origin: top center;
   }
@@ -6949,5 +7006,403 @@ body,
 .phone[data-theme] .member-hero-copy .eyebrow {
   background: var(--inverse-bg);
   color: var(--inverse-text);
+}
+
+.annotation-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  cursor: crosshair;
+}
+
+.annotation-layer--element { cursor: cell; }
+
+.annotation-layer--preview {
+  pointer-events: none;
+  cursor: default;
+}
+
+.annotation-layer--preview .annotation-marker {
+  pointer-events: auto;
+}
+
+.annotation-marker {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  border: 2px solid #FFFFFF;
+  border-radius: 50%;
+  background: #202020;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.annotation-marker.active { background: #FFFFFF; color: #202020; border-color: #202020; }
+
+.annotation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.annotation-sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  display: grid;
+  gap: 12px;
+  margin: 0 -2px;
+  padding: 18px 2px 14px;
+  border-bottom: 1px solid #E5E7EB;
+  background: #FFFFFF;
+}
+
+.annotation-panel-head {
+  display: block;
+}
+
+.annotation-panel-head h2 {
+  margin: 2px 0 0;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.annotation-add-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.annotation-add-actions button {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid #D1D5DB;
+  border-radius: var(--radius-sm);
+  background: #FFFFFF;
+  color: #5F6670;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.annotation-add-actions button.active {
+  background: #222222;
+  border-color: #222222;
+  color: #FFFFFF;
+}
+
+.annotation-add-actions button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.annotation-hint {
+  padding: 11px 12px;
+  border-radius: var(--radius-thumb);
+  background: #F3F4F6;
+  color: #5F6670;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.annotation-list {
+  display: grid;
+  gap: 8px;
+}
+
+.annotation-list-item > button {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid #E5E7EB;
+  border-radius: var(--radius-thumb);
+  background: #FFFFFF;
+  color: #222222;
+  text-align: left;
+  cursor: pointer;
+}
+
+.annotation-list-item > button:hover,
+.annotation-list-item > button.active {
+  border-color: #D1D5DB;
+  background: #F3F4F6;
+}
+
+.annotation-list-item > button.active {
+  border-color: #222222;
+}
+
+.annotation-list-item > button > span {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #222222;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.annotation-list-item > button strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annotation-list-item > button em {
+  max-width: 150px;
+  overflow: hidden;
+  color: #5F6670;
+  font-size: 11px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annotation-empty {
+  padding: 30px 16px;
+  border: 0;
+  border-radius: var(--radius-thumb);
+  background: #F3F4F6;
+  color: #5F6670;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.annotation-list-item {
+  overflow: hidden;
+  border-radius: var(--radius-thumb);
+}
+
+.annotation-list-item.active {
+  border: 1px solid #222222;
+  background: #FFFFFF;
+}
+
+.annotation-list-item.active > button {
+  border: 0;
+  border-bottom: 1px solid #E5E7EB;
+  border-radius: 0;
+  background: #F3F4F6;
+}
+
+.annotation-detail {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  background: #FFFFFF;
+}
+
+.annotation-detail .annotation-anchor-meta {
+  padding-bottom: 9px;
+}
+
+.annotation-detail dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.annotation-detail dl > div {
+  display: grid;
+  gap: 4px;
+}
+
+.annotation-detail dt {
+  color: #5F6670;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.annotation-detail dd {
+  margin: 0;
+  color: #222222;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.annotation-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.annotation-detail-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: var(--radius-sm);
+  background: #FFFFFF;
+  color: #222222;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.annotation-editor {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #E5E7EB;
+  border-radius: var(--radius-control);
+  background: #F9FAFB;
+}
+
+.annotation-editor-state {
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-thumb);
+  background: #FFFFFF;
+}
+
+.annotation-editor-state > svg {
+  width: 30px;
+  height: 30px;
+  padding: 7px;
+  border-radius: var(--radius-sm);
+  background: #F3F4F6;
+  color: #222222;
+}
+
+.annotation-editor-state.is-new > svg {
+  background: #222222;
+  color: #FFFFFF;
+}
+
+.annotation-editor-state > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.annotation-editor-state strong {
+  color: #222222;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 900;
+}
+
+.annotation-editor-state span {
+  color: #5F6670;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.annotation-anchor-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #E5E7EB;
+  color: #5F6670;
+  font-size: 12px;
+}
+
+.annotation-anchor-meta code {
+  max-width: 260px;
+  overflow: hidden;
+  color: #222222;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annotation-editor label {
+  display: grid;
+  gap: 6px;
+  color: #222222;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.annotation-editor input,
+.annotation-editor select,
+.annotation-editor textarea {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #D1D5DB;
+  border-radius: var(--radius-sm);
+  background: #FFFFFF;
+  color: #222222;
+  padding: 9px 10px;
+  font: inherit;
+  line-height: 1.45;
+  resize: vertical;
+  outline: none;
+}
+
+.annotation-editor input:focus,
+.annotation-editor select:focus,
+.annotation-editor textarea:focus {
+  border-color: #222222;
+  box-shadow: 0 0 0 2px rgba(34, 34, 34, .08);
+}
+
+.annotation-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.annotation-editor-actions button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: var(--radius-sm);
+  background: #FFFFFF;
+  color: #222222;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.annotation-editor-actions .primary {
+  background: #222222;
+  color: #FFFFFF;
+  border-color: #222222;
+}
+
+.annotation-editor-actions .danger {
+  color: #991B1B;
+}
+
+.annotation-save-status {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: #FFFFFF;
+  color: #5F6670;
+  font-size: 12px;
 }
 /* MLP STRICT FRAMEWORK GUARDS END */

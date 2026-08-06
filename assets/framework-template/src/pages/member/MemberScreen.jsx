@@ -1,6 +1,6 @@
 import { Check, Clock, Crown, ShieldCheck } from 'lucide-react';
 import { bindElement, bindInteraction } from '../../framework/interaction.js';
-import { Button, Modal, SegmentedControl } from '../../prototype-ui/components/index.jsx';
+import { Button, Checkbox, Modal, Pressable, SegmentedControl } from '../../prototype-ui/components/index.jsx';
 
 const benefits = ['高清无水印导出', '会员模板不限量', '生成排队加速', '每月赠送积分'];
 
@@ -27,14 +27,11 @@ export default function MemberScreen({ activeState, setActiveState, setActiveInt
         {benefits.map((item) => <article key={item}><Check size={16} /><span>{item}</span></article>)}
       </section>
       <section className="plan-list" {...bindInteraction('member-plan-list', setActiveInteraction)}>
-        <button type="button" className="selected"><strong>连续包月</strong><span>¥28.00 / 月</span></button>
-        <button type="button"><strong>连续包年</strong><span>¥198.00 / 年</span></button>
+        <Pressable className="selected"><strong>连续包月</strong><span>¥28.00 / 月</span></Pressable>
+        <Pressable><strong>连续包年</strong><span>¥198.00 / 年</span></Pressable>
       </section>
       {platform === 'android' ? (
-        <label className="agreement-row" {...bindInteraction('member-agreement', setActiveInteraction)}>
-          <input type="checkbox" />
-          <span>同意《会员协议》《续费协议》</span>
-        </label>
+        <Checkbox className="agreement-row" label="同意《会员协议》《续费协议》" {...bindInteraction('member-agreement', setActiveInteraction)} />
       ) : (
         <article className="ios-note" {...bindElement('member-ios-note', setActiveInteraction)}><ShieldCheck size={16} />支持首周优惠、恢复购买和 App Store 订阅提醒</article>
       )}
@@ -42,7 +39,7 @@ export default function MemberScreen({ activeState, setActiveState, setActiveInt
         <Button block onClick={() => setActiveState(countdown ? platform : 'countdown')} {...bindInteraction('member-pay-button', setActiveInteraction)}>
           3 天免费试用
         </Button>
-        <button type="button" className="text-link" onClick={() => setActiveState('retention')} {...bindInteraction('member-leave', setActiveInteraction)}>暂不开通</button>
+        <Pressable className="text-link" onClick={() => setActiveState('retention')} {...bindInteraction('member-leave', setActiveInteraction)}>暂不开通</Pressable>
       </footer>
       <Modal
         open={retention}

@@ -20,8 +20,10 @@ import {
   Modal,
   PhonePage,
   PlaceholderImage,
+  Pressable,
   SegmentedControl,
   TemplateCard,
+  TextInput,
   Toast,
   TopBar
 } from '../../prototype-ui/components/index.jsx';
@@ -68,8 +70,8 @@ export default function ComponentLibraryScreen({ setActiveInteraction }) {
 
       <section className="component-section">
         <h3>表单</h3>
-        <FormField label="邮箱" helper="最多 64 个字符"><input value="pm@example.com" readOnly /></FormField>
-        <FormField label="验证码" action={<button>获取</button>}><input value="" readOnly placeholder="输入验证码" /></FormField>
+        <FormField label="邮箱" helper="最多 64 个字符"><TextInput value="pm@example.com" readOnly /></FormField>
+        <FormField label="验证码" action={<Pressable>获取</Pressable>}><TextInput value="" readOnly placeholder="输入验证码" /></FormField>
       </section>
 
       <section className="component-section">

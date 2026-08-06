@@ -3,16 +3,27 @@ import { spawn } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as projectData from '../src/project/project-data.js';
 
-const root = resolve(new URL('..', import.meta.url).pathname);
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const args = process.argv.slice(2);
 const snapshotOnly = args.includes('--snapshot-only');
 const updateBaseline = args.includes('--update-baseline');
 const explicitCompare = args.includes('--compare');
 const compare = explicitCompare || (!snapshotOnly && !updateBaseline);
 const baseUrl = process.env.MLP_RUNTIME_URL || `http://127.0.0.1:${process.env.MLP_RUNTIME_PORT || '5376'}/`;
-const chromePath = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chromeCandidates = process.platform === 'win32'
+  ? [
+      resolve(process.env.LOCALAPPDATA || '', 'Google/Chrome/Application/chrome.exe'),
+      resolve(process.env.PROGRAMFILES || '', 'Google/Chrome/Application/chrome.exe'),
+      resolve(process.env['PROGRAMFILES(X86)'] || '', 'Google/Chrome/Application/chrome.exe'),
+      resolve(process.env.PROGRAMFILES || '', 'Microsoft/Edge/Application/msedge.exe')
+    ]
+  : process.platform === 'darwin'
+    ? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge']
+    : ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+const chromePath = process.env.CHROME_PATH || chromeCandidates.find(existsSync) || '';
 const remoteDebuggingPort = Number(process.env.MLP_CHROME_DEBUG_PORT || 9336);
 const userDataDir = mkdtempSync(resolve(tmpdir(), 'mlp-visual-chrome-'));
 const visualRoot = resolve(root, '.mlp/visual');

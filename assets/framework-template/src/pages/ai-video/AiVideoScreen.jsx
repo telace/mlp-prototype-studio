@@ -1,6 +1,6 @@
 import { ImagePlus, Loader2, Send, Sparkles, X } from 'lucide-react';
 import { bindElement, bindInteraction } from '../../framework/interaction.js';
-import { BottomSheet, Button, ChipScroller, FormField, Modal, PlaceholderImage, TemplateCard } from '../../prototype-ui/components/index.jsx';
+import { BottomSheet, Button, ChipScroller, FormField, Modal, PlaceholderImage, Pressable, TemplateCard, TextArea } from '../../prototype-ui/components/index.jsx';
 
 const styles = ['日落视频', '服装视频', '口播视频', '剧情视频', '美女视频'];
 const cases = ['丰胸', '腹肌', '增加锁骨', '瘦身', '瘦腿', '直角肩'];
@@ -15,7 +15,7 @@ export default function AiVideoScreen({ activeState, setPage, setActiveState, se
       <section className="video-canvas" {...bindInteraction('ai-video-upload', setActiveInteraction)}>
         {hasImage ? (
           <PlaceholderImage ratio="4 / 5" tone={1} video>
-            <button type="button" className="remove-media"><X size={14} /></button>
+            <Pressable className="remove-media"><X size={14} /></Pressable>
           </PlaceholderImage>
         ) : (
           <div className="upload-empty">
@@ -31,17 +31,17 @@ export default function AiVideoScreen({ activeState, setPage, setActiveState, se
         ))}
       </section>
       <section className="prompt-dock" {...bindInteraction('ai-video-prompt-box', setActiveInteraction)}>
-        <button type="button" className="aux-upload" onClick={() => setActiveState('album')}><ImagePlus size={18} /></button>
+        <Pressable className="aux-upload" onClick={() => setActiveState('album')}><ImagePlus size={18} /></Pressable>
         <FormField label="提示词">
-          <textarea placeholder="输入想生成的内容，如“戴上墨镜”" rows={2} />
+          <TextArea placeholder="输入想生成的内容，如“戴上墨镜”" rows={2} />
         </FormField>
-        <button type="button" className="send-btn" onClick={create} {...bindInteraction('ai-video-generate', setActiveInteraction)}><Send size={18} /></button>
+        <Pressable className="send-btn" onClick={create} {...bindInteraction('ai-video-generate', setActiveInteraction)}><Send size={18} /></Pressable>
       </section>
 
       <BottomSheet open={activeState === 'album'} title="选择照片" onClose={() => setActiveState('default')} className="album-sheet">
         <div className="album-grid" {...bindInteraction('ai-video-album-sheet', setActiveInteraction)}>
           {[0, 1, 2, 3, 4, 5].map((item) => (
-            <button key={item} type="button" onClick={() => setActiveState('uploaded')}><PlaceholderImage ratio="1 / 1" tone={item % 3} /></button>
+            <Pressable key={item} onClick={() => setActiveState('uploaded')}><PlaceholderImage ratio="1 / 1" tone={item % 3} /></Pressable>
           ))}
         </div>
       </BottomSheet>

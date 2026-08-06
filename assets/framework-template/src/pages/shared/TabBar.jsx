@@ -1,5 +1,6 @@
 import { Home, Images, User } from 'lucide-react';
 import { bindInteraction } from '../../framework/interaction.js';
+import { BottomTabBar } from '../../prototype-ui/components/index.jsx';
 
 export default function TabBar({ active, setPage, setActiveState, setActiveInteraction }) {
   const tabs = [
@@ -7,13 +8,5 @@ export default function TabBar({ active, setPage, setActiveState, setActiveInter
     { id: 'works', label: '作品', icon: Images },
     { id: 'profile', label: '我的', icon: User }
   ];
-  return (
-    <nav className="tabbar" {...bindInteraction('global-tabs', setActiveInteraction)}>
-      {tabs.map((tab, index) => {
-        const Icon = tab.icon;
-        const isActive = active === tab.id;
-        return <button key={`${tab.label}-${index}`} className={isActive ? 'active' : ''} onClick={() => { setActiveState('default'); setPage(tab.id); }}><Icon size={21} />{tab.label}</button>;
-      })}
-    </nav>
-  );
+  return <BottomTabBar className="tabbar" tabs={tabs} active={active} onChange={(id) => { setActiveState('default'); setPage(id); }} {...bindInteraction('global-tabs', setActiveInteraction)} />;
 }

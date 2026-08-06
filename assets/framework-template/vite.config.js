@@ -15,14 +15,14 @@ function mlpLocalNotesEditor() {
     name: 'mlp-local-notes-editor',
     configureServer(server) {
       server.middlewares.use('/__mlp/api/notes/update', async (req, res) => {
-        if (req.method !== 'POST') {
+        if (!['POST', 'DELETE'].includes(req.method)) {
           sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
           return;
         }
 
         try {
           const payload = JSON.parse(await readBody(req));
-          const result = saveLocalNoteEdit(payload);
+          const result = req.method === 'DELETE' ? deleteLocalNoteEdit(payload) : saveLocalNoteEdit(payload);
           sendJson(res, 200, { ok: true, ...result });
         } catch (error) {
           sendJson(res, error.statusCode || 500, {
@@ -60,7 +60,7 @@ function mlpLocalNotesEditor() {
     }
 
     const file = readEditsFile();
-    const bucketKey = target === 'overview' ? 'pages' : target === 'test' ? 'tests' : 'items';
+    const bucketKey = target === 'overview' ? 'pages' : target === 'test' ? 'tests' : target === 'annotation' ? 'annotations' : 'items';
     const bucket = file[bucketKey] || {};
     const pageItems = bucket[pageId] || {};
     const stateItems = pageItems[stateId] || {};
@@ -101,6 +101,7 @@ function mlpLocalNotesEditor() {
       items: file.items || {},
       pages: file.pages || {},
       tests: file.tests || {},
+      annotations: file.annotations || {},
       [bucketKey]: bucket
     });
 
@@ -119,7 +120,7 @@ function mlpLocalNotesEditor() {
     }
 
     const file = readEditsFile();
-    const bucketKey = target === 'overview' ? 'pages' : target === 'test' ? 'tests' : 'items';
+    const bucketKey = target === 'overview' ? 'pages' : target === 'test' ? 'tests' : target === 'annotation' ? 'annotations' : 'items';
     const bucket = file[bucketKey] || {};
     const pageItems = bucket[pageId] || {};
     const stateItems = pageItems[stateId] || {};
@@ -173,6 +174,7 @@ function mlpLocalNotesEditor() {
       items: file.items || {},
       pages: file.pages || {},
       tests: file.tests || {},
+      annotations: file.annotations || {},
       [bucketKey]: bucket
     });
 
@@ -180,26 +182,43 @@ function mlpLocalNotesEditor() {
   }
 
   function readEditsFile() {
-    if (!existsSync(editsPath)) return { version: 1, items: {}, pages: {}, tests: {} };
+    if (!existsSync(editsPath)) return { version: 1, items: {}, pages: {}, tests: {}, annotations: {} };
     try {
       return JSON.parse(readFileSync(editsPath, 'utf8'));
     } catch {
       throwHttp(500, 'invalid_edits_file', 'local-edits.json 不是合法 JSON，已阻止写入。');
     }
   }
+
+  function deleteLocalNoteEdit(payload) {
+    const { target, pageId, stateId = '__default', itemId } = payload || {};
+    if (target !== 'annotation' || !pageId || !itemId) throwHttp(400, 'invalid_payload', '删除标注参数不完整。');
+    const file = readEditsFile();
+    const annotations = file.annotations || {};
+    const pageItems = annotations[pageId] || {};
+    const stateItems = { ...(pageItems[stateId] || {}) };
+    delete stateItems[itemId];
+    annotations[pageId] = { ...pageItems, [stateId]: stateItems };
+    writeJson(editsPath, { ...file, version: 1, updatedAt: new Date().toISOString(), annotations });
+    return { itemId };
+  }
 }
 
 function toComparableFields(item, target = 'interaction') {
-  const keys = target === 'overview'
+  const keys = target === 'annotation'
+    ? ['anchorType', 'coordinateSpace', 'elementId', 'x', 'y', 'pageId', 'stateId', 'kind', 'title', 'description', 'effect', 'dataSource']
+    : target === 'overview'
     ? ['title', 'purpose', 'parentPage', 'childPages', 'elements']
     : target === 'test'
       ? ['cases']
       : ['kind', 'type', 'title', 'effect', 'dataSource', 'composition', 'states', 'fields'];
-  return Object.fromEntries(keys.map((key) => [key, item?.[key] || '']));
+  return Object.fromEntries(keys.map((key) => [key, item?.[key] ?? '']));
 }
 
 function validateFields(fields, target = 'interaction') {
-  const required = target === 'overview'
+  const required = target === 'annotation'
+    ? ['anchorType', 'title', 'description']
+    : target === 'overview'
     ? ['title', 'purpose', 'parentPage', 'childPages', 'elements']
     : target === 'test'
       ? []

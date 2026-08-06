@@ -538,45 +538,45 @@ body,
 }
 
 .phone[data-theme="dark"] {
-  --app-bg: #171A1D;
-  --surface-1: #202326;
-  --surface-2: #282B2E;
-  --surface-3: #34373A;
-  --placeholder: #5C5F61;
-  --border: #33373A;
-  --text-strong: #F4F4F1;
-  --text-muted: #A7A9A8;
-  --text-soft: #D5D6D3;
-  --text-subtle: #B9BBB9;
-  --inverse-bg: #F4F4F1;
+  --app-bg: #171717;
+  --surface-1: #202020;
+  --surface-2: #282828;
+  --surface-3: #343434;
+  --placeholder: #5C5C5C;
+  --border: #343434;
+  --text-strong: #F4F4F4;
+  --text-muted: #A8A8A8;
+  --text-soft: #D5D5D5;
+  --text-subtle: #B9B9B9;
+  --inverse-bg: #F4F4F4;
   --inverse-text: #111111;
   --action-primary-text: #FFFFFF;
-  --topbar-bg: #202326;
-  --tabbar-bg: #202326;
-  --tabbar-border: #303437;
-  --tabbar-active-bg: #F4F4F1;
+  --topbar-bg: #202020;
+  --tabbar-bg: #202020;
+  --tabbar-border: #303030;
+  --tabbar-active-bg: #F4F4F4;
   --tabbar-active-text: #111111;
   --drawer-scrim: #111111;
 }
 
 .phone[data-theme="light"] {
-  --app-bg: #F6F7F8;
+  --app-bg: #F7F7F7;
   --surface-1: #FFFFFF;
-  --surface-2: #EEF0F2;
-  --surface-3: #E1E4E8;
-  --placeholder: #B7BDC5;
-  --border: #E0E3E7;
-  --text-strong: #1F2328;
-  --text-muted: #667085;
-  --text-soft: #4B5563;
-  --text-subtle: #667085;
-  --inverse-bg: #1F2328;
+  --surface-2: #EEEEEE;
+  --surface-3: #E2E2E2;
+  --placeholder: #B8B8B8;
+  --border: #E0E0E0;
+  --text-strong: #202020;
+  --text-muted: #686868;
+  --text-soft: #4C4C4C;
+  --text-subtle: #686868;
+  --inverse-bg: #202020;
   --inverse-text: #FFFFFF;
   --action-primary-text: #FFFFFF;
   --topbar-bg: #FFFFFF;
   --tabbar-bg: #FFFFFF;
-  --tabbar-border: #E1E4E8;
-  --tabbar-active-bg: #1F2328;
+  --tabbar-border: #E2E2E2;
+  --tabbar-active-bg: #202020;
   --tabbar-active-text: #FFFFFF;
   --drawer-scrim: #1F2328;
 }
@@ -602,6 +602,12 @@ body,
   position: relative;
   z-index: 0;
   height: calc(var(--phone-h, 812px) - var(--statusbar-h, 44px));
+  background: var(--app-bg);
+}
+
+.screen > .app-page {
+  min-height: 100%;
+  background: var(--app-bg);
 }
 
 .screen--primary {
@@ -631,7 +637,7 @@ body,
 .phone[data-theme] .member-center-screen,
 .phone[data-theme] .points-center-screen,
 .phone[data-theme] .result-screen {
-  background: var(--surface-2);
+  background: var(--app-bg);
   color: var(--text-strong);
 }
 
