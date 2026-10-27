@@ -1,148 +1,18 @@
-# MLP Mobile Prototype Design Process
+# MLP 原型设计方法
 
-Use this reference whenever creating a new product flow, redesigning a phone page, or when the user says the prototype feels generic, inconsistent, or poorly designed.
+从已同步的中文PRD出发，使用 visual-standard.md 中基于PixVerse参考HTML重写的视觉与交互指导。原型内容和结构服务于产品目标。
 
-## Design Objective
+## 设计过程
 
-MLP turns product intent into a reviewable mobile C-end experience. The phone prototype must help a product manager decide:
+1. 找出当前页面最重要的信息和动作，为它安排合适的视觉重心。不同任务可以采用不同布局；内容发现、编辑创作、资料设置无需套用同一种卡片列表。
+2. 为项目选择协调的字体、表面层次、强调方式和组件细节。可参考HTML的暗色层次、柔和圆角、局部渐变与高对比动作，也可以将这些关系转为浅色或其他品牌风格。
+3. 先做通主要体验，再补齐相关的按压、选中、展开、等待和结束反馈。让交互后的变化可见且连贯，具体方法与检查归 visual-standard.md。
+4. 在真实内容长度、滚动和操作条件下调整细节。参考图、代码和模板值提供起点，最终以当前产品的呈现和行为判断。
 
-1. whether the user flow is complete;
-2. whether each screen gives the next action enough priority;
-3. whether states and recovery paths are credible;
-4. whether UI and development can implement the same component system;
-5. whether the selected direction is better than plausible alternatives.
+需要时比较设计方向，选择可以解释的方案；不要求固定提案数量。设计备注可放在 src/project/design.js 的 notes 中，无需新增设计审批、组件登记或强制设计字段。
 
-Do not optimize for decorative novelty. Optimize for task clarity, coherent interaction, consistent composition, and fast product review.
+原生控件、自定义组件、第三方组件与 prototype-ui 均可选用。允许页面CSS定义外观，公共模式在有实际复用价值时抽取。
 
-## Required Design Brief
+页面、行内展开、Sheet、Modal和自动状态推进按体验需要选择。工作台状态切换可提供可复查入口；不要求把每个弹层都变成独立页面。
 
-Before implementing new business pages, fill `src/project/design.js`. Use concise statements, not a speculative PRD.
-
-- `audience`: primary user and relevant context.
-- `job`: the task the user is trying to complete.
-- `businessGoal`: the product outcome this flow should support.
-- `experienceGoal`: one measurable or observable UX priority.
-- `reference`: existing product, screenshot, code, or design system to preserve or learn from.
-- `contentPriority`: ordered information/actions for the key screen.
-- `constraints`: platform, market, authentication, media, accessibility, or technical constraints.
-
-If a field cannot be inferred safely and materially changes the design, ask one focused question. Otherwise state the assumption in the brief and continue.
-
-## Design Context First
-
-Before drawing:
-
-1. Inspect existing MLP pages, components, tokens, routes, and screenshots supplied by the user.
-2. Identify recurring navigation, cards, form controls, sheets, empty states, and bottom actions.
-3. Preserve established product conventions unless the user is explicitly redesigning them.
-4. Record the selected design direction and reference in `designContract`.
-
-Starting from real context is preferred. Never invent a new palette page by page.
-
-## Flow Before Screens
-
-Write the core flow as a short state sequence:
-
-```text
-entry -> decision/input -> processing -> result -> recovery/next action
-```
-
-Then define:
-
-- real routes/screens;
-- states within each screen;
-- the primary action for every state;
-- failure, empty, loading, permission, and cancellation paths;
-- where the user can safely go back without losing work.
-
-Do not start visual composition until the core path and state ownership are coherent.
-
-## Explore Before Committing
-
-For a new key page or a material redesign, create 2-3 genuinely different layout concepts before changing the formal MLP page.
-
-- **Safe:** extends the current component and navigation patterns.
-- **Focused:** removes secondary content and prioritizes the core task.
-- **Exploratory:** uses a different interaction model only when it plausibly improves the experience goal.
-
-Describe each concept with:
-
-- information hierarchy;
-- primary interaction model;
-- advantage against `experienceGoal`;
-- main risk or trade-off;
-- components that can be reused.
-
-Recommend one concept. Do not create five cosmetic variants of the same layout. For small edits, skip concept generation and preserve the accepted direction.
-
-Concepts are temporary design artifacts. Do not add them to the real page directory, Product Notes, Test Cases, or deployment output. Implement only the selected concept in `src/pages/`.
-
-## Mobile Composition Rules
-
-Design for the `375 x 812` viewport and real touch behavior.
-
-- Give every state one visually dominant next action.
-- Keep primary navigation stable across primary pages.
-- Use top back navigation only on real secondary screens.
-- Put persistent form actions in the shared bottom action pattern.
-- Prefer progressive disclosure over showing every setting at once.
-- Keep tap targets at least `44px` for primary actions and navigation.
-- Use one clear page title, one section hierarchy, and restrained metadata.
-- Avoid repeated cards when spacing, dividers, or grouped rows communicate structure better.
-- Avoid nested cards, decorative dashboards, marketing hero layouts, and arbitrary floating actions.
-- Use realistic content lengths and test the longest labels.
-- Show useful loading, empty, failure, and disabled states instead of generic placeholders.
-- Treat the phone canvas as one continuous app surface: status chrome must follow the page/top-bar tone, the page root must fill the viewport, and only the outer ring may expose the black phone shell. A mismatched status strip or uncovered bottom block is a structural defect.
-
-## Binding Visual Contract
-
-Treat `designContract` and phone theme tokens as a binding design system.
-
-- Business pages use semantic variables from `src/framework/framework.css` and shared `prototype-ui` components.
-- Do not write raw hex, rgb, hsl, or named colors in `src/pages/`.
-- Do not create page-local color variables.
-- Default low-fi mode is grayscale. Allow a brand accent only after the user approves a colored direction and the contract records it.
-- One project has one palette policy. Light and dark themes must use the same semantic token names.
-- Do not introduce one-off radius, spacing, shadow, or type scales when a token or shared component exists.
-- If a repeated pattern appears twice, promote it to `prototype-ui` or a shared page component before making a third copy.
-
-Framework shell colors are separate and fixed. Never use workspace tokens inside the phone UI or phone tokens in workspace panels.
-
-## Component-First Implementation
-
-Before coding a screen, map each block to an existing primitive:
-
-- page shell: `PhonePage`, `TopBar`, `BottomTabBar`;
-- actions: `Button`, `IconButton`, shared bottom action pattern;
-- choices: `SegmentedControl`, `ChipScroller`;
-- content: `TemplateCard`, `PlaceholderImage`;
-- forms: `FormField`;
-- overlays: `BottomSheet`, `Modal`, `Toast`;
-- states: `EmptyState`, `LoadingState`.
-
-Add a shared component only when it removes real duplication or stabilizes behavior. Page components own product composition, not a second design system.
-
-## Design Review
-
-Before asking for design confirmation, check:
-
-1. **Goal:** the dominant action advances the experience goal.
-2. **Hierarchy:** the screen remains understandable when color is removed.
-3. **Consistency:** repeated functions use the same component and state treatment.
-4. **Palette:** page code contains no raw colors and both themes remain readable.
-5. **Density:** content is complete but not crowded; secondary details are deferred.
-6. **Flow:** primary, back, cancel, retry, and failure paths work.
-7. **Mobile fit:** labels, controls, bottom actions, sheets, and modals fit the phone viewport.
-8. **Distinctiveness:** the selected concept reflects product context rather than a generic template.
-
-Run `npm run mlp:fast-check` after implementation. Run screenshot-producing visual review only when the user explicitly asks for visual review, consistent with the MLP verification contract.
-
-## Competitive Ideas Adopted
-
-This process adapts three proven mechanisms without importing competitor frameworks:
-
-- Baoyu Design: design context and a binding, versioned visual contract.
-- Claude Wireframe Skill: safe plus exploratory concepts and goal-based recommendation.
-- Wireframe Prototyper: semantic palette roles, component-first screens, and compliance checks.
-
-MLP remains the source of truth for mobile canvas, routes, states, documentation, acceptance, and deployment.
+按 template-contract.md 保持工作台集成、固定目录入口和人工标注锚点。修改前更新PRD，更新后直接继续实现，不增加中间人工确认。

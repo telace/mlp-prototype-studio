@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Crosshair, MousePointer2, Pencil, Plus, Save, Trash2, X } from 'lucide-react';
+import { Crosshair, EyeOff, MousePointer2, Pencil, Plus, RotateCcw, Save, Trash2, X } from 'lucide-react';
 
 const blankDraft = { title: '', description: '', effect: '', dataSource: '' };
 const stableStringify = (value) => {
@@ -17,7 +17,7 @@ const stableHash = (value) => {
   return hash.toString(16);
 };
 
-export default function AnnotationPanel({ ctx, mode, setMode, annotations, selected, onSelect, pending, onSaved, onDeleted, onDirtyChange }) {
+export default function AnnotationPanel({ ctx, mode, setMode, annotations, selected, onSelect, pending, onSaved, onDeleted, onDirtyChange, elementDeletions = [], pendingElementDeletion, onConfirmElementDeletion, onCancelElementDeletion, onRestoreElement }) {
   const [draft, setDraft] = useState(blankDraft);
   const [status, setStatus] = useState('');
   const [editing, setEditing] = useState(false);
@@ -95,10 +95,30 @@ export default function AnnotationPanel({ ctx, mode, setMode, annotations, selec
         <div className="annotation-add-actions" role="group" aria-label="新增标注">
           <button type="button" disabled={Boolean(pending)} className={mode === 'element' ? 'active' : ''} onClick={() => setMode(mode === 'element' ? 'preview' : 'element')}><MousePointer2 size={14} />{mode === 'element' ? '等待点击元素' : '添加元素标注'}</button>
           <button type="button" disabled={Boolean(pending)} className={mode === 'coordinate' ? 'active' : ''} onClick={() => setMode(mode === 'coordinate' ? 'preview' : 'coordinate')}><Crosshair size={14} />{mode === 'coordinate' ? '等待点击位置' : '添加坐标标注'}</button>
+          <button type="button" disabled={Boolean(pending)} className={mode === 'delete-element' ? 'active danger' : 'danger'} onClick={() => setMode(mode === 'delete-element' ? 'preview' : 'delete-element')}><EyeOff size={14} />{mode === 'delete-element' ? '等待选择元素' : '删除元素'}</button>
         </div>
       </div>
 
-      {mode !== 'preview' ? <div className="annotation-hint">{mode === 'element' ? '请在手机原型中点击一个已绑定元素；添加后自动退出。' : '请在手机画布中点击需要说明的位置；添加后自动退出。'}</div> : null}
+      {mode !== 'preview' ? <div className="annotation-hint">{mode === 'element' ? '请在手机原型中点击一个已绑定元素；添加后自动退出。' : mode === 'delete-element' ? '请点击需要删除的已绑定元素；选择后还需要二次确认。' : '请在手机画布中点击需要说明的位置；添加后自动退出。'}</div> : null}
+
+      {pendingElementDeletion ? (
+        <div className="element-deletion-confirm" role="alertdialog" aria-label="确认删除元素">
+          <strong>确认删除这个元素？</strong>
+          <span>{pendingElementDeletion.title}</span>
+          <code>{pendingElementDeletion.elementId}</code>
+          <p>确认后立即从当前页面状态隐藏，并加入 AI 源码清理队列。</p>
+          <div><button type="button" onClick={onCancelElementDeletion}>取消</button><button type="button" className="danger" onClick={onConfirmElementDeletion}>确认删除</button></div>
+        </div>
+      ) : null}
+
+      {elementDeletions.length ? (
+        <section className="element-deletion-list">
+          <h3>待清理元素</h3>
+          {elementDeletions.map((item) => (
+            <div key={item.elementId}><span><strong>{item.title || item.elementId}</strong><code>{item.elementId}</code></span><button type="button" onClick={() => onRestoreElement(item)}><RotateCcw size={13} />撤销</button></div>
+          ))}
+        </section>
+      ) : null}
 
       <div className="annotation-list">
         {annotations.length ? annotations.map((item, index) => (

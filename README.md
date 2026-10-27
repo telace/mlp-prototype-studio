@@ -19,7 +19,13 @@ Use `mlp` in Codex to invoke the workflow.
 
 ```bash
 # Create a new project
-scripts/scaffold-framework-project.sh <project-slug>
+node scripts/scaffold-framework-project.mjs <project-slug> --name "Project Name"
+
+# Windows shortcut
+scripts\\scaffold-framework-project.cmd <project-slug> --name "Project Name"
+
+# Maintainer cold-start regression
+node scripts/mlp-scaffold-acceptance.mjs
 
 # Refresh an existing project to the latest framework guards
 scripts/refresh-project.sh <project-slug-or-path>
@@ -52,3 +58,5 @@ scripts/
 ```
 
 `assets/framework-template/` is the source template for new projects. Runtime dependencies, build output, and release snapshots are intentionally ignored by Git.
+
+New projects start in `discovery` with a clean draft PRD and no product pages. Complete and sync the PRD and design contract, then change `.mlp/project.json.lifecycle` to `prototype` before adding the first page. Generated projects use npm and `package-lock.json`.

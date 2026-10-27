@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import PhoneFrame from '../framework/PhoneFrame.jsx';
 import { directoryStatusCopy, getPageUpdateKey, getStateOptions, pageDirectory, uiDesignChecklist } from '../project/project-data.js';
 
-export default function UIDesignChecklistPage({ pageReadVersions }) {
+export default function UIDesignChecklistPage({ pageReadVersions, theme }) {
   const [selectedNumber, setSelectedNumber] = useState(uiDesignChecklist[0]?.number);
   const selectedItem = uiDesignChecklist.find((item) => item.number === selectedNumber) || uiDesignChecklist[0];
   const selectedTarget = useMemo(() => {
@@ -14,6 +14,18 @@ export default function UIDesignChecklistPage({ pageReadVersions }) {
   const setPreviewPage = () => {};
   const setPreviewState = () => {};
   const setPreviewInteraction = () => {};
+
+  if (!selectedItem) {
+    return (
+      <section className="checklist-stage" aria-label="UI设计清单">
+        <div className="checklist-head">
+          <span className="eyebrow">UI scope</span>
+          <h2>UI设计清单</h2>
+          <p>当前尚未创建产品页面。页面和状态将在写入 PRD 后加入此清单。</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="checklist-stage checklist-stage-with-preview" aria-label="UI设计清单">
@@ -58,7 +70,7 @@ export default function UIDesignChecklistPage({ pageReadVersions }) {
           setPage={setPreviewPage}
           setActiveState={setPreviewState}
           setActiveInteraction={setPreviewInteraction}
-          theme="light"
+          theme={theme}
         />
       </aside>
     </section>

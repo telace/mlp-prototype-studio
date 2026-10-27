@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_ARG="${1:-}"
-VERIFY_MODE="${2:-}"
+VERIFY_MODE="${2:---full-acceptance}"
 
 if [[ -z "$PROJECT_ARG" ]]; then
   echo "Usage: $0 <project-slug-or-absolute-path> [--full-acceptance|--visual-acceptance]" >&2

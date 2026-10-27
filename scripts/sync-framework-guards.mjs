@@ -68,7 +68,8 @@ packageJson.scripts['mlp:review'] = 'node scripts/mlp-loop-review.mjs';
 packageJson.scripts['mlp:runtime-review'] = 'node scripts/mlp-runtime-review.mjs';
 packageJson.scripts['mlp:visual-review'] = 'node scripts/mlp-visual-review.mjs';
 packageJson.scripts['mlp:visual-snapshot'] = 'node scripts/mlp-visual-review.mjs --snapshot-only';
-packageJson.scripts['mlp:fast-check'] = 'npm run mlp:review && npm run build';
+packageJson.scripts.prebuild = 'node scripts/mlp-loop-review.mjs && node scripts/write-version.mjs';
+packageJson.scripts['mlp:fast-check'] = 'npm run build';
 packageJson.scripts['mlp:route-check'] = 'npm run mlp:fast-check && npm run mlp:runtime-review';
 packageJson.scripts['mlp:acceptance'] = 'npm run mlp:route-check';
 packageJson.scripts['mlp:visual-acceptance'] = 'npm run mlp:acceptance && npm run mlp:visual-review';
@@ -106,19 +107,6 @@ const shellBlock = `${shellStart}
   --workspace-panel-muted-text: #5F6670;
   --status-approved: #3B82F6;
   --status-draft: #FACC15;
-  --radius-phone: 34px;
-  --radius-card: 16px;
-  --radius-control: 12px;
-  --radius-icon: 10px;
-  --radius-pill: 999px;
-  --space-page-x: 16px;
-  --space-section: 16px;
-  --space-section-lg: 22px;
-  --space-list: 10px;
-  --space-inline: 8px;
-  --space-card: 12px;
-  --space-card-lg: 16px;
-  --line: 1px solid;
 }
 
 html,
@@ -535,50 +523,6 @@ body,
   overflow: hidden;
   position: relative;
   box-shadow: 0 0 0 10px #050505;
-}
-
-.phone[data-theme="dark"] {
-  --app-bg: #171717;
-  --surface-1: #202020;
-  --surface-2: #282828;
-  --surface-3: #343434;
-  --placeholder: #5C5C5C;
-  --border: #343434;
-  --text-strong: #F4F4F4;
-  --text-muted: #A8A8A8;
-  --text-soft: #D5D5D5;
-  --text-subtle: #B9B9B9;
-  --inverse-bg: #F4F4F4;
-  --inverse-text: #111111;
-  --action-primary-text: #FFFFFF;
-  --topbar-bg: #202020;
-  --tabbar-bg: #202020;
-  --tabbar-border: #303030;
-  --tabbar-active-bg: #F4F4F4;
-  --tabbar-active-text: #111111;
-  --drawer-scrim: #111111;
-}
-
-.phone[data-theme="light"] {
-  --app-bg: #F7F7F7;
-  --surface-1: #FFFFFF;
-  --surface-2: #EEEEEE;
-  --surface-3: #E2E2E2;
-  --placeholder: #B8B8B8;
-  --border: #E0E0E0;
-  --text-strong: #202020;
-  --text-muted: #686868;
-  --text-soft: #4C4C4C;
-  --text-subtle: #686868;
-  --inverse-bg: #202020;
-  --inverse-text: #FFFFFF;
-  --action-primary-text: #FFFFFF;
-  --topbar-bg: #FFFFFF;
-  --tabbar-bg: #FFFFFF;
-  --tabbar-border: #E2E2E2;
-  --tabbar-active-bg: #202020;
-  --tabbar-active-text: #FFFFFF;
-  --drawer-scrim: #1F2328;
 }
 
 .phone[data-theme] {

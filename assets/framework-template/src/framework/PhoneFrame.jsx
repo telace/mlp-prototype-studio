@@ -1,13 +1,13 @@
 import { ArrowLeft } from 'lucide-react';
 import { getPageShellConfig, pageCopy, pageDirectory } from '../project/project-data.js';
 import { renderPhoneScreen } from '../project/routes.jsx';
-import { TabBar } from '../pages/index.js';
+import { IconButton } from '../prototype-ui/components/index.jsx';
 import AnnotationLayer from './AnnotationLayer.jsx';
 
-export default function PhoneFrame({ page, activeState, setPage, setActiveState, setActiveInteraction, theme, annotationMode = 'preview', annotations = [], selectedAnnotationId, onCreateAnnotation, onSelectAnnotation }) {
+export default function PhoneFrame({ page, activeState, setPage, setActiveState, setActiveInteraction, theme, annotationMode = 'preview', annotations = [], selectedAnnotationId, onCreateAnnotation, onSelectAnnotation, onRequestElementDeletion }) {
   const shell = getPageShellConfig(page);
   const shouldCoverStatusbar = shell.secondary && ['sheet', 'modal'].includes(activeState);
-  const fallbackPage = pageDirectory.find((item) => item.level !== 'docs')?.id || pageDirectory[0]?.id || 'home';
+  const fallbackPage = pageDirectory.find((item) => item.level !== 'docs')?.id || pageDirectory[0]?.id || page;
   return (
     <div className="phone" data-theme={theme} data-page-level={shell.level}>
       <div className="statusbar">
@@ -21,8 +21,7 @@ export default function PhoneFrame({ page, activeState, setPage, setActiveState,
       <div className={shell.screenClassName}>
         {renderPhoneScreen({ page, activeState, setPage, setActiveState, setActiveInteraction })}
       </div>
-      {shell.showTabBar ? <TabBar active={page} setPage={setPage} setActiveState={setActiveState} setActiveInteraction={setActiveInteraction} /> : null}
-      <AnnotationLayer mode={annotationMode} annotations={annotations} selectedId={selectedAnnotationId} onCreate={onCreateAnnotation} onSelect={onSelectAnnotation} />
+      <AnnotationLayer mode={annotationMode} annotations={annotations} selectedId={selectedAnnotationId} onCreate={onCreateAnnotation} onSelect={onSelectAnnotation} onRequestElementDeletion={onRequestElementDeletion} />
     </div>
   );
 }
@@ -30,7 +29,7 @@ export default function PhoneFrame({ page, activeState, setPage, setActiveState,
 function BackBar({ title, onBack }) {
   return (
     <div className="nav-bar">
-      <button className="icon-btn" type="button" onClick={onBack} aria-label="返回"><ArrowLeft size={20} /></button>
+      <IconButton icon={<ArrowLeft size={20} />} label="返回" onClick={onBack} />
       <span>{title}</span>
       <span />
     </div>

@@ -60,7 +60,7 @@ function mlpLocalNotesEditor() {
     }
 
     const file = readEditsFile();
-    const bucketKey = target === 'overview' ? 'pages' : target === 'test' ? 'tests' : target === 'annotation' ? 'annotations' : 'items';
+    const bucketKey = target === 'overview' ? 'pages' : target === 'test' ? 'tests' : target === 'annotation' ? 'annotations' : target === 'elementDeletion' ? 'elementDeletions' : 'items';
     const bucket = file[bucketKey] || {};
     const pageItems = bucket[pageId] || {};
     const stateItems = pageItems[stateId] || {};
@@ -102,6 +102,7 @@ function mlpLocalNotesEditor() {
       pages: file.pages || {},
       tests: file.tests || {},
       annotations: file.annotations || {},
+      elementDeletions: file.elementDeletions || {},
       [bucketKey]: bucket
     });
 
@@ -120,7 +121,7 @@ function mlpLocalNotesEditor() {
     }
 
     const file = readEditsFile();
-    const bucketKey = target === 'overview' ? 'pages' : target === 'test' ? 'tests' : target === 'annotation' ? 'annotations' : 'items';
+    const bucketKey = target === 'overview' ? 'pages' : target === 'test' ? 'tests' : target === 'annotation' ? 'annotations' : target === 'elementDeletion' ? 'elementDeletions' : 'items';
     const bucket = file[bucketKey] || {};
     const pageItems = bucket[pageId] || {};
     const stateItems = pageItems[stateId] || {};
@@ -175,6 +176,7 @@ function mlpLocalNotesEditor() {
       pages: file.pages || {},
       tests: file.tests || {},
       annotations: file.annotations || {},
+      elementDeletions: file.elementDeletions || {},
       [bucketKey]: bucket
     });
 
@@ -182,7 +184,7 @@ function mlpLocalNotesEditor() {
   }
 
   function readEditsFile() {
-    if (!existsSync(editsPath)) return { version: 1, items: {}, pages: {}, tests: {}, annotations: {} };
+    if (!existsSync(editsPath)) return { version: 1, items: {}, pages: {}, tests: {}, annotations: {}, elementDeletions: {} };
     try {
       return JSON.parse(readFileSync(editsPath, 'utf8'));
     } catch {
@@ -192,14 +194,15 @@ function mlpLocalNotesEditor() {
 
   function deleteLocalNoteEdit(payload) {
     const { target, pageId, stateId = '__default', itemId } = payload || {};
-    if (target !== 'annotation' || !pageId || !itemId) throwHttp(400, 'invalid_payload', '删除标注参数不完整。');
+    if (!['annotation', 'elementDeletion'].includes(target) || !pageId || !itemId) throwHttp(400, 'invalid_payload', '删除参数不完整。');
     const file = readEditsFile();
-    const annotations = file.annotations || {};
-    const pageItems = annotations[pageId] || {};
+    const bucketKey = target === 'annotation' ? 'annotations' : 'elementDeletions';
+    const bucket = file[bucketKey] || {};
+    const pageItems = bucket[pageId] || {};
     const stateItems = { ...(pageItems[stateId] || {}) };
     delete stateItems[itemId];
-    annotations[pageId] = { ...pageItems, [stateId]: stateItems };
-    writeJson(editsPath, { ...file, version: 1, updatedAt: new Date().toISOString(), annotations });
+    bucket[pageId] = { ...pageItems, [stateId]: stateItems };
+    writeJson(editsPath, { ...file, version: 1, updatedAt: new Date().toISOString(), [bucketKey]: bucket });
     return { itemId };
   }
 }
@@ -207,6 +210,8 @@ function mlpLocalNotesEditor() {
 function toComparableFields(item, target = 'interaction') {
   const keys = target === 'annotation'
     ? ['anchorType', 'coordinateSpace', 'elementId', 'x', 'y', 'pageId', 'stateId', 'kind', 'title', 'description', 'effect', 'dataSource']
+    : target === 'elementDeletion'
+    ? ['elementId', 'pageId', 'stateId', 'title', 'status', 'createdAt']
     : target === 'overview'
     ? ['title', 'purpose', 'parentPage', 'childPages', 'elements']
     : target === 'test'
@@ -218,6 +223,8 @@ function toComparableFields(item, target = 'interaction') {
 function validateFields(fields, target = 'interaction') {
   const required = target === 'annotation'
     ? ['anchorType', 'title', 'description']
+    : target === 'elementDeletion'
+    ? ['elementId', 'pageId', 'stateId', 'status']
     : target === 'overview'
     ? ['title', 'purpose', 'parentPage', 'childPages', 'elements']
     : target === 'test'

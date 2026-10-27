@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
-export default function AnnotationLayer({ mode, annotations, onCreate, onSelect, selectedId }) {
+export default function AnnotationLayer({ mode, annotations, onCreate, onSelect, selectedId, onRequestElementDeletion }) {
   const [, rerender] = useState(0);
 
   useEffect(() => {
@@ -54,11 +54,18 @@ export default function AnnotationLayer({ mode, annotations, onCreate, onSelect,
       y: clamp((event.clientY - phoneRect.top) / scale, 0, 812)
     };
 
-    if (mode === 'element') {
+    if (mode === 'element' || mode === 'delete-element') {
       const target = document.elementsFromPoint(event.clientX, event.clientY)
         .map((node) => node.closest?.('[data-interaction-id]'))
         .find((node) => node && phone.contains(node));
       if (!target) {
+        return;
+      }
+      if (mode === 'delete-element') {
+        onRequestElementDeletion?.({
+          elementId: target.dataset.interactionId,
+          title: target.getAttribute('aria-label') || target.textContent?.trim().slice(0, 40) || target.dataset.interactionId
+        });
         return;
       }
       const rect = target.getBoundingClientRect();

@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "prebuild": "node scripts/write-version.mjs",
+    "prebuild": "node scripts/mlp-loop-review.mjs && node scripts/write-version.mjs",
     "build": "vite build",
     "mlp:review": "node scripts/mlp-loop-review.mjs",
     "mlp:annotation-acceptance": "node scripts/mlp-annotation-acceptance.mjs",
-    "mlp:fast-check": "npm run mlp:review && npm run build",
+    "mlp:fast-check": "npm run build",
     "preview": "vite preview --host 0.0.0.0",
     "mlp:framework-sync": "node scripts/mlp-skill-command.mjs sync",
     "mlp:migrate-full": "node scripts/mlp-skill-command.mjs migrate",

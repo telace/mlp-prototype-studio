@@ -1,29 +1,15 @@
 export const designContract = {
-  version: 1,
-  status: 'draft',
-  fidelity: 'low-fi',
-  platform: 'mobile-c-end',
-  audience: 'Define the primary user and usage context.',
-  job: 'Define the core task the user needs to complete.',
-  businessGoal: 'Define the product outcome supported by this flow.',
-  experienceGoal: 'Define one priority such as clarity, completion, or discovery.',
-  reference: 'Record the product, screenshot, codebase, or design system used as context.',
-  contentPriority: [],
-  constraints: [],
-  direction: 'safe',
-  palette: {
-    mode: 'grayscale',
-    accent: 'none',
-    tokenSource: 'src/framework/framework.css'
-  }
+  version: 2,
+  prd: {
+    path: 'docs/PRD.md',
+    status: 'synced',
+    version: '0.13',
+    syncedAt: '2026-10-26'
+  },
+  notes: ''
 };
 
-export const isDesignBriefReady = () => {
-  const required = [
-    designContract.audience,
-    designContract.job,
-    designContract.businessGoal,
-    designContract.experienceGoal
-  ];
-  return required.every((value) => value && !value.startsWith('Define '));
-};
+export const isPrdSynced = () => designContract.prd?.status === 'synced';
+
+// Compatibility export: design notes no longer form a separate approval gate.
+export const isDesignBriefReady = isPrdSynced;

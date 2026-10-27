@@ -36,9 +36,7 @@ copyDir('src/app');
 copyDir('src/docs');
 copyDir('src/prototype-ui');
 copyDir('src/project/test-cases');
-if (!existsSync(resolve(projectRoot, 'src/project/specs.js'))) {
-  copyFile('src/project/specs.js');
-}
+copyFile('src/project/specs.js');
 if (!existsSync(resolve(projectRoot, 'src/project/prompts.js'))) {
   copyFile('src/project/prompts.js');
 }
@@ -60,12 +58,13 @@ const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
 packageJson.scripts = packageJson.scripts || {};
 packageJson.dependencies = packageJson.dependencies || {};
 packageJson.dependencies.html2canvas = '^1.4.1';
+packageJson.scripts.prebuild = 'node scripts/mlp-loop-review.mjs && node scripts/write-version.mjs';
 packageJson.scripts['mlp:review'] = 'node scripts/mlp-loop-review.mjs';
 delete packageJson.scripts['mlp:generate-docs'];
 delete packageJson.scripts['mlp:prototype-acceptance'];
 delete packageJson.scripts['mlp:docs-complete'];
 packageJson.scripts['mlp:annotation-acceptance'] = 'node scripts/mlp-annotation-acceptance.mjs';
-packageJson.scripts['mlp:fast-check'] = 'npm run mlp:review && npm run build';
+packageJson.scripts['mlp:fast-check'] = 'npm run build';
 packageJson.scripts['mlp:runtime-review'] = 'node scripts/mlp-runtime-review.mjs';
 packageJson.scripts['mlp:route-check'] = 'npm run mlp:fast-check && npm run mlp:runtime-review';
 packageJson.scripts['mlp:visual-review'] = 'node scripts/mlp-visual-review.mjs';

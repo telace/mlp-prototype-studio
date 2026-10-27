@@ -7,9 +7,11 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const editsPath = resolve(root, 'src/project/notes/local-edits.json');
 const file = existsSync(editsPath) ? JSON.parse(readFileSync(editsPath, 'utf8')) : {};
 const annotations = file.annotations || {};
+const elementDeletions = file.elementDeletions || {};
 const validPages = new Set(pageDirectory.map((item) => item.id));
 const findings = [];
 let count = 0;
+let deletionCount = 0;
 
 const collectSource = (dir) => readdirSync(dir).flatMap((entry) => {
   const path = join(dir, entry);
@@ -50,7 +52,24 @@ for (const [pageId, states] of Object.entries(annotations)) {
   }
 }
 
+for (const [pageId, states] of Object.entries(elementDeletions)) {
+  if (!validPages.has(pageId)) findings.push('删除队列包含未知页面: ' + pageId);
+  const validStates = validPages.has(pageId) ? new Set(getStateOptions(pageId).map((item) => item.id)) : new Set();
+  for (const [stateId, items] of Object.entries(states || {})) {
+    if (stateId !== '__default' && !validStates.has(stateId)) findings.push('删除队列包含未知状态: ' + pageId + '/' + stateId);
+    for (const [elementId, item] of Object.entries(items || {})) {
+      deletionCount += 1;
+      if (item.elementId !== elementId) findings.push('删除元素 ID 不一致: ' + elementId);
+      if (item.pageId !== pageId || item.stateId !== stateId) findings.push('删除元素页面/状态归属不一致: ' + elementId);
+      if (!['pending', 'applied', 'conflict'].includes(item.status)) findings.push('删除元素状态无效: ' + elementId);
+      if (item.status === 'pending' && !hasBoundSource(elementId)) findings.push('待删除元素已不在源码中，请标记 applied: ' + elementId);
+      if (item.status === 'applied' && hasBoundSource(elementId)) findings.push('已清理元素重新出现在源码中: ' + elementId);
+      if (item.status === 'conflict' && !item.reason) findings.push('冲突删除缺少原因: ' + elementId);
+    }
+  }
+}
+
 console.log('MLP manual annotation acceptance');
-console.log(findings.length ? 'FAIL' : 'PASS', count + ' annotation(s) checked');
+console.log(findings.length ? 'FAIL' : 'PASS', count + ' annotation(s), ' + deletionCount + ' element deletion(s) checked');
 for (const finding of findings) console.log('- ' + finding);
 if (findings.length) process.exitCode = 1;

@@ -2,6 +2,7 @@ import {
   ChevronLeft,
   ImagePlus,
   Loader2,
+  Search,
   X
 } from 'lucide-react';
 
@@ -46,11 +47,11 @@ export function BottomTabBar({ tabs = [], active, onChange, className }) {
   );
 }
 
-export function Button({ children, variant = 'primary', size = 'md', block = false, icon, iconRight, className, ...props }) {
+export function Button({ children, variant = 'primary', size = 'md', block = false, icon, iconRight, loading = false, ...props }) {
   return (
-    <button className={cx('mlp-button', `mlp-button--${variant}`, `mlp-button--${size}`, block && 'mlp-button--block', className)} {...props}>
-      {icon ? <span className="mlp-button__icon">{icon}</span> : null}
-      <span>{children}</span>
+    <button {...props} className={cx('mlp-button', `mlp-button--${variant}`, `mlp-button--${size}`, block && 'mlp-button--block')} aria-busy={loading || undefined} disabled={loading || props.disabled}>
+      {loading ? <Loader2 className="mlp-button__spinner spin" size={16} /> : icon ? <span className="mlp-button__icon">{icon}</span> : null}
+      <span className="mlp-button__label">{loading ? '处理中' : children}</span>
       {iconRight ? <span className="mlp-button__icon">{iconRight}</span> : null}
     </button>
   );
@@ -212,4 +213,72 @@ export function LoadingState({ title = '加载中', description, className }) {
       {description ? <p>{description}</p> : null}
     </section>
   );
+}
+
+export function PageScaffold({ children, topBar, bottomBar, className, ...props }) {
+  return <div className={cx('app-page', 'mlp-page-scaffold', className)} {...props}>{topBar ? <div className="mlp-page-scaffold__top">{topBar}</div> : null}<main className="mlp-page-scaffold__content">{children}</main>{bottomBar ? <div className="mlp-page-scaffold__bottom">{bottomBar}</div> : null}</div>;
+}
+
+export function ScrollablePageWithActions({ children, primaryAction, secondaryAction, actions, actionLayout, actionBarClassName, className, ...props }) {
+  const legacyActions = primaryAction == null && secondaryAction == null ? actions : null;
+  const layout = actionLayout || (secondaryAction ? 'dual' : 'single');
+  const actionContent = legacyActions || <>{secondaryAction}{primaryAction}</>;
+  return <PageScaffold className={cx('mlp-scroll-actions', className)} bottomBar={<ActionBar layout={layout} className={actionBarClassName}>{actionContent}</ActionBar>} {...props}>{children}</PageScaffold>;
+}
+
+export function ActionBar({ children, layout = 'auto', className }) {
+  return <div className={cx('mlp-action-bar', `mlp-action-bar--${layout}`, className)}>{children}</div>;
+}
+
+export function FormSection({ title, description, action, children, className, ...props }) {
+  return <section className={cx('mlp-form-section', className)} {...props}>{title || description || action ? <header className="mlp-section-head"><div>{title ? <strong>{title}</strong> : null}{description ? <p>{description}</p> : null}</div>{action}</header> : null}<div className="mlp-form-section__body">{children}</div></section>;
+}
+
+export function SelectionChips({ options = [], value = [], multiple = false, onChange, label = '选项', disabled = false, readOnly = false, ...props }) {
+  const selected = new Set(Array.isArray(value) ? value : [value]);
+  const choose = (id) => onChange?.(multiple ? (selected.has(id) ? [...selected].filter((item) => item !== id) : [...selected, id]) : id);
+  return <div className="mlp-selection-chips" role="group" aria-label={label} data-read-only={readOnly || undefined} {...props}>{options.map((option) => <button key={option.id} type="button" className={selected.has(option.id) ? 'active' : ''} aria-pressed={selected.has(option.id)} disabled={disabled || readOnly || option.disabled} onClick={() => choose(option.id)}>{option.label}</button>)}</div>;
+}
+
+export function SurfaceCard({ children, selected = false, interactive = false, className, ...props }) {
+  const Tag = interactive ? 'button' : 'section';
+  return <Tag className={cx('mlp-surface-card', selected && 'selected', interactive && 'interactive', className)} {...props}>{children}</Tag>;
+}
+
+export function CardTitle({ children, className, ...props }) {
+  return <strong className={cx('mlp-card-title', className)} {...props}>{children}</strong>;
+}
+
+export function CardBody({ children, className, ...props }) {
+  return <p className={cx('mlp-card-body', className)} {...props}>{children}</p>;
+}
+
+export function CardMeta({ children, className, ...props }) {
+  return <span className={cx('mlp-card-meta', className)} {...props}>{children}</span>;
+}
+
+export function MediaCard({ src, alt = '', title, subtitle, meta, badge, ratio = '3 / 4', selected = false, onClick, className, ...props }) {
+  return <SurfaceCard interactive selected={selected} className={cx('mlp-media-card', className)} onClick={onClick} {...props}><div className="mlp-media-card__media" style={{ '--mlp-media-ratio': ratio }}>{src ? <img src={src} alt={alt} /> : <PlaceholderImage ratio={ratio} />}{badge ? <Badge>{badge}</Badge> : null}</div><div className="mlp-media-card__copy"><strong title={title}>{title}</strong>{subtitle ? <span title={subtitle}>{subtitle}</span> : null}{meta ? <small>{meta}</small> : null}</div></SurfaceCard>;
+}
+
+export function SettingsRow({ icon, title, description, value, trailing, onClick, disabled = false, className, ...props }) {
+  const Tag = onClick ? 'button' : 'div';
+  return <Tag className={cx('mlp-settings-row', onClick && 'interactive', className)} onClick={onClick} disabled={onClick ? disabled : undefined} {...props}>{icon ? <span className="mlp-settings-row__icon">{icon}</span> : null}<span className="mlp-settings-row__copy"><strong>{title}</strong>{description ? <small>{description}</small> : null}</span>{value ? <span className="mlp-settings-row__value">{value}</span> : null}{trailing}</Tag>;
+}
+
+export function Switch({ checked = false, onChange, label, disabled = false, ...props }) {
+  return <label className="mlp-switch"><input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange?.(event.target.checked)} {...props} /><span className="mlp-switch__track"><span /></span>{label ? <span className="mlp-switch__label">{label}</span> : null}</label>;
+}
+
+export function Badge({ children, tone = 'neutral', className }) {
+  return <span className={cx('mlp-badge', `mlp-badge--${tone}`, className)}>{children}</span>;
+}
+
+export function SearchField({ value, onChange, placeholder = '搜索', disabled = false, ...props }) {
+  return <label className="mlp-search-field"><Search size={16} /><input value={value} onChange={onChange} placeholder={placeholder} disabled={disabled} {...props} /></label>;
+}
+
+export function ProgressBar({ value = 0, max = 100, label, showValue = false, className }) {
+  const percent = Math.max(0, Math.min(100, max ? (value / max) * 100 : 0));
+  return <div className={cx('mlp-progress', className)}>{label || showValue ? <div className="mlp-progress__label"><span>{label}</span>{showValue ? <span>{Math.round(percent)}%</span> : null}</div> : null}<div className="mlp-progress__track" role="progressbar" aria-valuemin="0" aria-valuemax={max} aria-valuenow={value}><span style={{ width: `${percent}%` }} /></div></div>;
 }

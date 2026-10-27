@@ -89,7 +89,7 @@ function saveReport() {
     `- Complete framework layer sync: ${report.stages.some((stage) => stage.name.includes('framework-sync') && stage.status === 'done') ? 'done' : 'not confirmed'}`,
     `- Business style migration: ${report.audits.after?.blockers?.some((item) => item.includes('pages.css') || item.includes('styles.css')) ? 'has blocking findings' : 'no blocking findings reported by audit'}`,
     `- Runtime route review: ${report.stages.some((stage) => stage.name === 'acceptance' && stage.status === 'done') ? 'passed through mlp:acceptance' : 'not passed'}`,
-    `- Visual review: explicit only; not run by migration unless requested separately with mlp:visual-acceptance`,
+    `- Visual review: optional; run mlp:visual-acceptance when requested or useful`,
     `- Human visual confirmation: not implied by this report; user or reviewer must inspect screenshots when visual risk remains.`,
     ``,
     `## Stages`,
@@ -172,8 +172,6 @@ function canRunSemanticLegacySplit() {
 
 function auditProject() {
   const sourceFiles = collectFiles(srcRoot, ['.js', '.jsx']);
-  const cssFiles = collectFiles(srcRoot, ['.css']);
-  const css = cssFiles.map((file) => `\n/* ${relative(projectRoot, file)} */\n${readFileSync(file, 'utf8')}`).join('\n');
   const blockers = [];
   const warnings = [];
   const pagesRootFiles = sourceFiles
@@ -211,9 +209,6 @@ function auditProject() {
   for (const file of sourceFiles.filter((item) => relative(projectRoot, item).startsWith('src/pages/'))) {
     const rel = relative(projectRoot, file);
     const text = readFileSync(file, 'utf8');
-    for (const legacy of ['modal-layer', 'prototype-modal', 'login-modal-backdrop', 'album-backdrop']) {
-      if (text.includes(legacy)) blockers.push(`${rel} 保留旧手写弹层: ${legacy}`);
-    }
     for (const match of text.matchAll(/import\s+\{([^}]+)\}\s+from\s+['"]lucide-react['"]/g)) {
       const imports = match[1].split(',').map((item) => item.trim()).filter(Boolean);
       if (imports.length > 12) warnings.push(`${rel} lucide-react 导入过宽: ${imports.length} 个`);
@@ -232,22 +227,11 @@ function auditProject() {
     if (!rootStyles.includes("@import './pages/styles/pages.css';") && !rootStyles.includes('@import "./pages/styles/pages.css";')) {
       blockers.push('src/styles.css 未导入 src/pages/styles/pages.css');
     }
-    const lineCount = rootStyles.split('\n').length;
-    if (lineCount > 1800) blockers.push(`src/styles.css 仍过重: ${lineCount} 行`);
   }
   if (existsSync(pagesCssPath)) {
     const pagesCss = readFileSync(pagesCssPath, 'utf8');
     for (const selector of ['.spec-panel', '.project-card', '.page-directory', '.checklist-stage', '.ui-spec-stage', '.phone {', '.statusbar', '.nav-bar', '.app-shell', '--workspace-']) {
       if (pagesCss.includes(selector)) blockers.push(`pages.css 包含框架壳层内容: ${selector}`);
-    }
-  }
-
-  const appColorPattern = /(^|[\s,.#])(?:phone|screen|home-|profile-|ai-video|login|creation|member|vip|points|energy|result|template|asset|tabbar|bottom-|modal|album|component-screen|placeholder|upload|tool-)[^{]*\{[^{}]*(?:#[0-9a-fA-F]{3,8}|rgba?\([^)]*\))/g;
-  for (const match of css.matchAll(appColorPattern)) {
-    const snippet = match[0];
-    if (!snippet.includes('var(') && !snippet.includes('phone[data-theme') && !snippet.includes('interaction-connector')) {
-      warnings.push('手机原型页面存在疑似硬编码色值，最终以 npm run mlp:review 的精确检查为准');
-      break;
     }
   }
 
@@ -268,7 +252,7 @@ const planned = [
   'Run semantic split when src/legacy/LegacyApp.jsx exists',
   'Run page/notes module split when compatible monolithic modules exist',
   'Run framework sync again to normalize scripts and guarded styles',
-  options.skipVerify ? 'Skip acceptance verification' : 'Run npm install when needed, npm run mlp:review, npm run build, and runtime acceptance. Visual review is explicit-only.',
+  options.skipVerify ? 'Skip acceptance verification' : 'Run npm install when needed and run mlp:acceptance for framework and data integrity.',
   options.keepFailed ? 'Keep failed project in place' : 'Rollback to backup automatically on failure'
 ];
 

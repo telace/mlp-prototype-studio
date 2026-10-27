@@ -1,9 +1,9 @@
-import { Boxes, ClipboardCheck, FileText, History, ListChecks, Moon, Sun, WandSparkles } from 'lucide-react';
+import { ClipboardCheck, FileText, History, ListChecks, Moon, Sun, WandSparkles } from 'lucide-react';
 import { project } from '../project/project-data.js';
 import { settingsRailPages } from './supportPages.js';
 
 const settingsPageIcons = {
-  components: Boxes,
+  prd: FileText,
   testAcceptance: ClipboardCheck,
   changelog: History
 };

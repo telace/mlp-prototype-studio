@@ -11,6 +11,7 @@ import UpdateBanner from '../framework/UpdateBanner.jsx';
 import { getRouteItems, supportPageIds } from '../framework/supportPages.js';
 import ChangelogPage from '../docs/ChangelogPage.jsx';
 import PromptDocsPage from '../docs/PromptDocsPage.jsx';
+import PRDPage from '../docs/PRDPage.jsx';
 import TestAcceptancePage from '../docs/TestAcceptancePage.jsx';
 import UIDesignChecklistPage from '../docs/UIDesignChecklistPage.jsx';
 import UISpecPage from '../docs/UISpecPage.jsx';
@@ -29,7 +30,7 @@ import bundledLocalEdits from '../project/notes/local-edits.json' with { type: '
 
 function parseRoute() {
   const directoryItems = getRouteItems(pageDirectory);
-  const fallbackPage = directoryItems.find((item) => item.level !== 'docs')?.id || directoryItems[0]?.id || 'home';
+  const fallbackPage = directoryItems.find((item) => item.id === 'prd')?.id || directoryItems[0]?.id || 'prd';
   if (typeof window === 'undefined') return { page: fallbackPage, state: 'default' };
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const page = directoryItems.some((item) => item.id === parts[0]) ? parts[0] : fallbackPage;
@@ -57,6 +58,8 @@ export default function App() {
   const [annotations, setAnnotations] = useState([]);
   const [selectedAnnotation, setSelectedAnnotation] = useState(null);
   const [pendingAnnotation, setPendingAnnotation] = useState(null);
+  const [elementDeletions, setElementDeletions] = useState([]);
+  const [pendingElementDeletion, setPendingElementDeletion] = useState(null);
   const [pageReadVersions, setPageReadVersions] = useState(readPageReadVersions);
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return getProjectDefaultTheme();
@@ -78,10 +81,13 @@ export default function App() {
         if (disposed) return;
         const stateItems = payload?.annotations?.[page]?.[activeState] || payload?.annotations?.[page]?.__default || {};
         setAnnotations(Object.values(stateItems).filter((item) => !item.deleted));
+        const deletionItems = payload?.elementDeletions?.[page]?.[activeState] || payload?.elementDeletions?.[page]?.__default || {};
+        setElementDeletions(Object.values(deletionItems).filter((item) => item.status === 'pending'));
         setSelectedAnnotation(null);
         setPendingAnnotation(null);
+        setPendingElementDeletion(null);
       })
-      .catch(() => setAnnotations([]));
+      .catch(() => { setAnnotations([]); setElementDeletions([]); });
     return () => { disposed = true; };
   }, [page, activeState]);
 
@@ -103,6 +109,52 @@ export default function App() {
     setSelectedAnnotation(null);
     setNotesDirty(false);
   };
+  const requestElementDeletion = (item) => {
+    setPendingElementDeletion(item);
+    setPendingAnnotation(null);
+    setSelectedAnnotation(null);
+    setAnnotationMode('preview');
+  };
+  const confirmElementDeletion = async () => {
+    if (!pendingElementDeletion?.elementId) return;
+    const item = { ...pendingElementDeletion, pageId: page, stateId: activeState, status: 'pending', createdAt: new Date().toISOString() };
+    const response = await fetch('/__mlp/api/notes/update', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: 'elementDeletion', pageId: page, stateId: activeState, itemId: item.elementId, fields: item })
+    });
+    if (!response.ok) return;
+    const payload = await response.json();
+    setElementDeletions((current) => [...current.filter((entry) => entry.elementId !== item.elementId), payload.item]);
+    setPendingElementDeletion(null);
+  };
+  const restoreElement = async (item) => {
+    const response = await fetch('/__mlp/api/notes/update', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: 'elementDeletion', pageId: page, stateId: activeState, itemId: item.elementId })
+    });
+    if (response.ok) setElementDeletions((current) => current.filter((entry) => entry.elementId !== item.elementId));
+  };
+
+  useEffect(() => {
+    let observer;
+    const applyElementDeletions = () => {
+      const phone = document.querySelector('.phone');
+      if (!phone) return;
+      phone.querySelectorAll('[data-mlp-element-deleted]').forEach((node) => node.removeAttribute('data-mlp-element-deleted'));
+      const deletedIds = new Set(elementDeletions.map((item) => item.elementId));
+      phone.querySelectorAll('[data-interaction-id]').forEach((node) => {
+        if (deletedIds.has(node.dataset.interactionId)) node.setAttribute('data-mlp-element-deleted', '');
+      });
+    };
+    const frame = window.requestAnimationFrame(() => {
+      applyElementDeletions();
+      const phone = document.querySelector('.phone');
+      if (!phone) return;
+      observer = new MutationObserver(applyElementDeletions);
+      observer.observe(phone, { childList: true, subtree: true });
+    });
+    return () => { window.cancelAnimationFrame(frame); observer?.disconnect(); };
+  }, [page, activeState, elementDeletions]);
 
   const toggleTheme = () => {
     setTheme((current) => {
@@ -127,12 +179,14 @@ export default function App() {
     if (!confirmLeaveDirtyNotes()) return;
     setNotesDirty(false);
     setAnnotationMode('preview');
+    setPendingElementDeletion(null);
     setPage(nextPage);
   };
   const changeState = (nextState) => {
     if (!confirmLeaveDirtyNotes()) return;
     setNotesDirty(false);
     setAnnotationMode('preview');
+    setPendingElementDeletion(null);
     setActiveState(nextState);
   };
 
@@ -204,7 +258,7 @@ export default function App() {
         <ProjectSettingsRail active={page} setPage={changePage} theme={theme} toggleTheme={toggleTheme} interactionGuideEnabled={interactionGuideEnabled} toggleInteractionGuide={toggleInteractionGuide} openCommandHelp={() => setCommandHelpOpen(true)} openAIHandoff={() => setAiHandoffOpen(true)} />
         <PageDirectory active={page} setPage={changePage} pageReadVersions={pageReadVersions} />
         {page === 'uiChecklist' ? (
-          <UIDesignChecklistPage pageReadVersions={pageReadVersions} />
+          <UIDesignChecklistPage pageReadVersions={pageReadVersions} theme={theme} />
         ) : page === 'uiSpec' ? (
           <UISpecPage />
         ) : page === 'testAcceptance' ? (
@@ -213,9 +267,11 @@ export default function App() {
           <ChangelogPage />
         ) : page === 'prompts' ? (
           <PromptDocsPage />
+        ) : page === 'prd' ? (
+          <PRDPage />
         ) : (
           <PrototypeStage page={page} activeState={activeState} setActiveState={changeState} setActiveInteraction={setActiveInteraction}>
-            <PhoneFrame page={page} activeState={activeState} setPage={changePage} setActiveState={changeState} setActiveInteraction={setActiveInteraction} theme={theme} annotationMode={annotationMode} annotations={annotations} selectedAnnotationId={(pendingAnnotation || selectedAnnotation)?.id} onCreateAnnotation={createAnnotation} onSelectAnnotation={(item) => { setAnnotationMode('preview'); setPendingAnnotation(null); setSelectedAnnotation(item); }} />
+            <PhoneFrame page={page} activeState={activeState} setPage={changePage} setActiveState={changeState} setActiveInteraction={setActiveInteraction} theme={theme} annotationMode={annotationMode} annotations={annotations} selectedAnnotationId={(pendingAnnotation || selectedAnnotation)?.id} onCreateAnnotation={createAnnotation} onSelectAnnotation={(item) => { setAnnotationMode('preview'); setPendingAnnotation(null); setSelectedAnnotation(item); }} onRequestElementDeletion={requestElementDeletion} />
           </PrototypeStage>
         )}
         {!isSupportPage ? (
@@ -230,6 +286,11 @@ export default function App() {
             onSaved={saveAnnotation}
             onDeleted={deleteAnnotation}
             onDirtyChange={setNotesDirty}
+            elementDeletions={elementDeletions}
+            pendingElementDeletion={pendingElementDeletion}
+            onConfirmElementDeletion={confirmElementDeletion}
+            onCancelElementDeletion={() => setPendingElementDeletion(null)}
+            onRestoreElement={restoreElement}
           />
         ) : null}
       </main>

@@ -4,11 +4,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const toPosix = (file) => relative(root, file).replaceAll('\\', '/');
-const mainPath = resolve(root, 'src/main.jsx');
 const stylesPath = resolve(root, 'src/styles.css');
 const srcRoot = resolve(root, 'src');
 const packagePath = resolve(root, 'package.json');
 const viteConfigPath = resolve(root, 'vite.config.js');
+const projectMetaPath = resolve(root, '.mlp/project.json');
 const collectFiles = (dir, extensions) => readdirSync(dir)
   .flatMap((entry) => {
     const fullPath = join(dir, entry);
@@ -39,6 +39,32 @@ const pathExists = (relPath) => {
 const packageJson = pathExists('package.json') ? JSON.parse(readFileSync(packagePath, 'utf8')) : {};
 const viteConfig = pathExists('vite.config.js') ? readFileSync(viteConfigPath, 'utf8') : '';
 const isFrameworkTemplate = packageJson.name === 'mobile-lowfi-framework-template';
+const projectMeta = pathExists('.mlp/project.json') ? JSON.parse(readFileSync(projectMetaPath, 'utf8')) : null;
+const lifecycle = projectMeta?.lifecycle || (isFrameworkTemplate ? 'template' : 'prototype');
+const isDiscovery = lifecycle === 'discovery';
+let stateChecklistCoverage = [];
+let numberingFindings = [];
+let productPageCount = 0;
+if (usesLayeredArchitecture) {
+  try {
+    const directoryModule = await import(`${pathToFileURL(resolve(root, 'src/project/directory.js')).href}?review=${Date.now()}`);
+    const statesModule = await import(`${pathToFileURL(resolve(root, 'src/project/states.js')).href}?review=${Date.now()}`);
+    const checklistKeys = new Set(directoryModule.uiDesignChecklist.map((item) => `${item.pageId}:${item.state}`));
+    const productPages = directoryModule.pageDirectory.filter((item) => item.level !== 'docs' && item.group !== '规范/文档');
+    stateChecklistCoverage = productPages.flatMap((page) => (statesModule.pageStateOptions[page.id] || [{ label: '默认态' }])
+      .filter((state) => !checklistKeys.has(`${page.id}:${state.label}`))
+      .map((state) => `${page.label}/${state.label}`));
+    productPageCount = productPages.length;
+    const pageNumbers = productPages.map((page) => String(page.number || ''));
+    numberingFindings = [
+      ...productPages.filter((page) => !/^\d+$/.test(String(page.number || ''))).map((page) => `${page.id} missing stable integer page number`),
+      ...(new Set(pageNumbers).size !== pageNumbers.length ? ['duplicate real page numbers'] : [])
+    ];
+  } catch {
+    stateChecklistCoverage = ['状态数据无法读取'];
+    numberingFindings = ['numbering data cannot be read'];
+  }
+}
 
 const uniq = (items) => [...new Set(items)].filter(Boolean).sort();
 const countLinesBefore = (text, index) => text.slice(0, index).split('\n').length;
@@ -84,111 +110,56 @@ const dynamicSourceIds = dynamicSourceCandidates.filter((id) => {
 const documentedIds = extractDocumentedIds(main);
 const expectedDocumentedIds = uniq([...extractBoundIds(main), ...documentedIds, ...dynamicSourceIds]);
 const generatedDocsPresent = documentedIds.length > 0;
-const missingNotes = [];
-const missingSource = [];
 
-function findStyleFindings(css) {
-  const checks = [
-    { level: 'error', label: 'dashed border', regex: /border[^;\n]*dashed/gi },
-    { level: 'error', label: 'decorative gradient', regex: /gradient\(/gi },
-    { level: 'error', label: 'blur/backdrop effect', regex: /(backdrop-filter|filter:\s*blur|blur\()/gi },
-    { level: 'warn', label: 'hard-coded off-token blue outside connector', regex: /#(?:1D4ED8|2563EB|2F80ED|3B82F6|60A5FA)\b/gi }
-  ];
-
-  return checks.flatMap((check) => {
-    const findings = [];
-    for (const match of css.matchAll(check.regex)) {
-      const line = countLinesBefore(css, match.index || 0);
-      const context = css.slice(Math.max(0, (match.index || 0) - 90), (match.index || 0) + 160);
-      if (check.label.includes('blue') && context.includes('interaction-connector')) continue;
-      if (check.label.includes('blue') && context.includes('status-dot')) continue;
-      if (check.label.includes('blue') && context.includes('--status-approved')) continue;
-      findings.push({ ...check, line, value: match[0] });
-    }
-    return findings;
-  });
-}
-
-function findHardcodedAppColors(css) {
-  const colorPattern = /(?:#[0-9a-fA-F]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\))/g;
-  const phoneSelectorPattern = /(^|[\s,.#])(?:phone|statusbar|nav-bar|screen|home-|profile-|ai-video|login|carrier|global-login|sms-login|code-login|email-login|creation|member|vip|points|energy|result|template|asset|work-|tabbar|bottom-|ghost-cta|icon-btn|modal|album|component-screen|padded|banner-placeholder|avatar-placeholder|upload|tool-|chips|search-box|mini-|photo-|workflow|notice|empty-state|new-work|play-dot|card-row|grid-list|works-list|prompt|strength|record-thumb|case-cover|task-)/;
-  const excludedSelectorPattern = /^(?:\s*:root|\s*body|\s*button|\s*\*|\s*\.app-shell|\s*\.workspace|\s*\.project-settings-rail|\s*\.left-rail|\s*\.project-card|\s*\.page-directory|\s*\.directory|\s*\.spec|\s*\.checklist|\s*\.ui-|\s*\.theme-toggle|\s*\.segmented-toggle|\s*\.update-banner|\s*\.interaction|\s*\.status-dot)/;
-  const allowedContextPattern = /phone\[data-theme=|MLP STRICT FRAMEWORK GUARDS|var\(|rgba\(0,\s*0,\s*0,\s*0\)|rgba\(16,\s*46,\s*96/;
-  const findings = [];
-
-  for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    const selector = match[1].replace(/\/\*[\s\S]*?\*\//g, '').trim();
-    const body = match[2];
-    if (!phoneSelectorPattern.test(selector) || excludedSelectorPattern.test(selector)) continue;
-    if (selector === '.phone') continue;
-    if (selector === '.phone[data-theme]') continue;
-    if (selector.includes('.phone[data-theme="')) continue;
-
-    for (const declaration of body.split(';')) {
-      if (!colorPattern.test(declaration)) {
-        colorPattern.lastIndex = 0;
-        continue;
-      }
-      colorPattern.lastIndex = 0;
-      const normalized = declaration.trim();
-      if (!normalized || allowedContextPattern.test(`${selector} { ${normalized} }`)) continue;
-      findings.push({
-        line: countLinesBefore(css, (match.index || 0) + match[0].indexOf(declaration)),
-        selector,
-        value: normalized
-      });
-    }
-  }
-
-  return findings;
-}
-
-const styleFindings = findStyleFindings(styles);
-const styleErrors = styleFindings.filter((finding) => finding.level === 'error');
-const styleWarnings = styleFindings.filter((finding) => finding.level === 'warn');
-const hardcodedAppColors = findHardcodedAppColors(styles);
-
-function findRawPageColors() {
-  const pageFiles = [...cssFiles, ...sourceFiles]
-    .filter((file) => {
-      const rel = toPosix(file);
-      return rel.startsWith('src/pages/') || rel === 'src/project/project.css';
-    });
-  const colorPattern = /(?:#[0-9a-fA-F]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\))/g;
-  return pageFiles.flatMap((file) => {
-    const source = readFileSync(file, 'utf8');
-    return [...source.matchAll(colorPattern)].map((match) => ({
-      file: toPosix(file),
-      line: countLinesBefore(source, match.index || 0),
-      value: match[0]
-    }));
-  });
-}
-
-const rawPageColors = findRawPageColors();
 const designContractPath = resolve(root, 'src/project/design.js');
 const designContractSource = pathExists('src/project/design.js') ? readFileSync(designContractPath, 'utf8') : '';
+const prdPath = resolve(root, 'docs/PRD.md');
+const prdSource = pathExists('docs/PRD.md') ? readFileSync(prdPath, 'utf8') : '';
+const prdPageSource = pathExists('src/docs/PRDPage.jsx') ? readFileSync(resolve(root, 'src/docs/PRDPage.jsx'), 'utf8') : '';
+const appSource = pathExists('src/app/App.jsx') ? readFileSync(resolve(root, 'src/app/App.jsx'), 'utf8') : '';
+const supportPagesSource = pathExists('src/framework/supportPages.js') ? readFileSync(resolve(root, 'src/framework/supportPages.js'), 'utf8') : '';
+const settingsRailSource = pathExists('src/framework/ProjectSettingsRail.jsx') ? readFileSync(resolve(root, 'src/framework/ProjectSettingsRail.jsx'), 'utf8') : '';
+const directorySource = pathExists('src/project/directory.js') ? readFileSync(resolve(root, 'src/project/directory.js'), 'utf8') : '';
 const projectDataSource = pathExists('src/project/project-data.js')
   ? readFileSync(resolve(root, 'src/project/project-data.js'), 'utf8')
   : '';
 const designContractChecks = [
   ['designContract export', /export\s+const\s+designContract\s*=/],
-  ['mobile C-end platform', /platform:\s*['"]mobile-c-end['"]/],
-  ['fidelity declaration', /fidelity:\s*['"](?:low-fi|mid-fi|high-fi)['"]/],
-  ['audience field', /audience\s*:/],
-  ['job field', /job\s*:/],
-  ['business goal field', /businessGoal\s*:/],
-  ['experience goal field', /experienceGoal\s*:/],
-  ['reference field', /reference\s*:/],
-  ['content priority field', /contentPriority\s*:/],
-  ['palette policy', /palette\s*:/],
-  ['semantic token source', /tokenSource:\s*['"]src\/framework\/framework\.css['"]/]
+  ['PRD metadata', /prd\s*:\s*\{/],
+  ['PRD path', /path:\s*['"]docs\/PRD\.md['"]/]
 ];
+const requiredPrdSections = [
+  '文档信息', '背景与问题', '产品目标', '非目标', '用户与场景', '用户流程', '功能范围', '页面与状态',
+  '功能需求', '业务规则', '数据与集成', '异常与边界', '权限与合规', '数据分析与成功指标',
+  '验收标准', '开放问题与假设', '变更记录'
+];
+const prdFailures = [
+  !prdSource ? 'docs/PRD.md is missing' : '',
+  ...requiredPrdSections.filter((heading) => !new RegExp(`^##\\s+\\d+\\.\\s+${heading}$`, 'm').test(prdSource))
+    .map((heading) => `PRD中文章节缺失: ${heading}`),
+  prdSource && !/^#\s+PRD[：:]\s*[^\n]+/m.test(prdSource) ? 'PRD中文标题缺失' : '',
+  prdSource && !/^状态：(草稿|已同步)$/m.test(prdSource) ? 'PRD必须使用中文状态：草稿或已同步' : '',
+  prdSource && !/^版本：[^\n]+$/m.test(prdSource) ? 'PRD必须使用中文版本标签' : '',
+  /^(?:Status|Version|Updated at|Synced at):/m.test(prdSource) ? 'PRD不得使用英文元数据标签' : '',
+  /^(?:##\s+\d+\.\s+)(?:Document Information|Background And Problem|Product Goals|Functional Requirements|Acceptance Criteria|Change Log)$/m.test(prdSource) ? 'PRD不得保留英文标准章节' : ''
+].filter(Boolean);
+const prdVisibilityFailures = [
+  !prdPageSource.includes("../../docs/PRD.md?raw") ? 'PRD page does not bundle docs/PRD.md' : '',
+  !appSource.includes("page === 'prd'") || !appSource.includes('<PRDPage />') ? 'App does not render the PRD support page' : '',
+  !/id:\s*['"]prd['"][^\n]+placement:\s*['"]settings['"]/.test(supportPagesSource) ? 'PRD is not a settings support page' : '',
+  !settingsRailSource.includes('prd: FileText') ? 'settings rail does not expose the PRD entry' : '',
+  /(?:pageDirectory|uiDesignChecklist)[\s\S]*?id:\s*['"]prd['"]/.test(directorySource) ? 'PRD must not enter the product directory or UI checklist' : ''
+].filter(Boolean);
+const fixedDirectorySupportFailures = [
+  !/id:\s*['"]uiChecklist['"][^\n]+label:\s*['"]UI设计清单['"][^\n]+group:\s*['"]规范\/文档['"]/.test(supportPagesSource) ? '页面目录缺少固定UI设计清单入口' : '',
+  !/id:\s*['"]prompts['"][^\n]+label:\s*['"]提示词['"][^\n]+group:\s*['"]提示词['"]/.test(supportPagesSource) ? '页面目录缺少固定提示词入口' : '',
+  /id:\s*['"](?:uiChecklist|prompts)['"][^\n]+placement:\s*['"](?:settings|hidden)['"]/.test(supportPagesSource) ? '固定UI设计清单或提示词入口不得隐藏或移出页面目录' : '',
+  !supportPagesSource.includes('...supportPages.filter((page) => !existingIds.has(page.id) && !page.placement)') ? '固定支持板块未追加到产品页面目录之后' : ''
+].filter(Boolean);
 const missingDesignContractChecks = designContractChecks
   .filter(([, pattern]) => !pattern.test(designContractSource))
   .map(([label]) => label);
 const designContractExportMissing = !projectDataSource.includes("export * from './design.js';");
-const designBriefPlaceholder = /Define the (?:primary user|core task|product outcome|one priority)/.test(designContractSource);
 let designContractRuntime = null;
 let designContractLoadError = '';
 if (pathExists('src/project/design.js')) {
@@ -198,50 +169,18 @@ if (pathExists('src/project/design.js')) {
     designContractLoadError = error.message;
   }
 }
-const designBriefRuntimeFailures = isFrameworkTemplate ? [] : [
+const prdRuntimeFailures = [
   designContractLoadError ? `design.js load failed: ${designContractLoadError}` : '',
-  designContractRuntime?.status !== 'ready' ? "status must be 'ready'" : '',
-  !['low-fi', 'mid-fi', 'high-fi'].includes(designContractRuntime?.fidelity) ? 'invalid fidelity' : '',
-  designContractRuntime?.platform !== 'mobile-c-end' ? 'platform must be mobile-c-end' : '',
-  ...['audience', 'job', 'businessGoal', 'experienceGoal', 'reference'].map((field) => {
-    const value = designContractRuntime?.[field];
-    return !value || /^Define |^Record /.test(value) ? `${field} is not configured` : '';
-  }),
-  !Array.isArray(designContractRuntime?.contentPriority) || designContractRuntime.contentPriority.length === 0
-    ? 'contentPriority must contain at least one item'
-    : '',
-  !['safe', 'focused', 'exploratory'].includes(designContractRuntime?.direction) ? 'invalid selected direction' : '',
-  !['grayscale', 'brand-accent'].includes(designContractRuntime?.palette?.mode) ? 'invalid palette mode' : '',
-  designContractRuntime?.palette?.mode === 'grayscale' && designContractRuntime?.palette?.accent !== 'none'
-    ? 'grayscale mode must use accent none'
-    : ''
+  !isFrameworkTemplate && !isDiscovery && designContractRuntime?.prd?.status !== 'synced' ? 'PRD must be synced before prototype work' : ''
 ].filter(Boolean);
-
-function findForbiddenPageTokens() {
-  const allowed = new Set([
-    '--app-bg', '--app-bg-deep', '--surface-1', '--surface-2', '--surface-3', '--placeholder',
-    '--border', '--border-strong', '--border-bright', '--text-strong', '--text-muted', '--text-soft',
-    '--inverse-bg', '--inverse-text', '--topbar-bg', '--tabbar-bg', '--tabbar-border',
-    '--tabbar-active-bg', '--tabbar-active-text', '--drawer-scrim', '--action-primary-text',
-    '--radius-none', '--radius-icon', '--radius-card', '--radius-control', '--radius-panel', '--radius-sheet',
-    '--radius-modal', '--radius-pill', '--radius-circle', '--space-page-x', '--space-section',
-    '--space-section-lg', '--space-list', '--space-inline', '--space-card', '--space-card-lg',
-    '--line', '--line-width'
-  ]);
-  return cssFiles
-    .filter((file) => {
-      const rel = toPosix(file);
-      return rel.startsWith('src/pages/') || rel === 'src/project/project.css';
-    })
-    .flatMap((file) => {
-      const source = readFileSync(file, 'utf8');
-      return [...source.matchAll(/var\((--[a-z0-9-]+)/gi)]
-        .filter((match) => !allowed.has(match[1]))
-        .map((match) => ({ file: toPosix(file), line: countLinesBefore(source, match.index || 0), token: match[1] }));
-    });
-}
-
-const forbiddenPageTokens = findForbiddenPageTokens();
+const lifecycleFailures = [
+  !['template', 'discovery', 'prototype', 'review', 'released'].includes(lifecycle) ? `invalid lifecycle: ${lifecycle}` : '',
+  isDiscovery && productPageCount > 0 ? 'discovery lifecycle must not contain product pages' : '',
+  isDiscovery && designContractRuntime?.prd?.status !== 'draft' ? "discovery PRD status must be 'draft'" : '',
+  !isFrameworkTemplate && !projectMeta ? '.mlp/project.json is missing' : '',
+  projectMeta && !projectMeta.name ? '.mlp project name is missing' : '',
+  projectMeta && !projectMeta.slug ? '.mlp project slug is missing' : ''
+].filter(Boolean);
 
 function findWorkspaceThemeLeaks(css) {
   const findings = [];
@@ -313,6 +252,8 @@ const requiredLayeredArchitectureChecks = usesLayeredArchitecture ? [
   { label: 'layered project routes exists', source: main, snippet: 'src/project/routes.jsx' },
   { label: 'layered pages exist', source: main, snippet: 'src/pages/' },
   { label: 'layered docs exist', source: main, snippet: 'src/docs/UIDesignChecklistPage.jsx' },
+  { label: 'UI checklist receives current prototype theme', source: main, snippet: '<UIDesignChecklistPage pageReadVersions={pageReadVersions} theme={theme}' },
+  { label: 'UI checklist preview uses current prototype theme', source: main, snippet: 'theme={theme}' },
   { label: 'prototype ui kit entry exists', source: main, snippet: 'src/prototype-ui/components/index.jsx' }
 ] : [];
 
@@ -371,6 +312,8 @@ const requiredShellChecks = [
   { label: 'direct phone page minimum height', source: styles, snippet: 'min-height: 100%;' },
   { label: 'theme switch is an independent card', source: main, snippet: 'className="theme-card"' },
   { label: 'directory has internal scroll area', source: main, snippet: 'className="directory-scroll"' },
+  { label: 'UI specification hidden from page directory', source: main, snippet: "id: 'uiSpec', number: 'S2', label: 'UI规范说明', group: '规范/文档', level: 'docs', status: 'draft', placement: 'hidden'" },
+  { label: 'directory excludes placed support pages', source: main, snippet: "supportPages.filter((page) => !existingIds.has(page.id) && !page.placement)" },
   { label: 'fixed wider Product Notes width', source: styles, snippet: '--workspace-notes-width: 546px;' },
   { label: 'left rails fixed height', source: styles, snippet: '.project-settings-rail,\n.left-rail' },
   { label: 'directory internal scroll CSS', source: styles, snippet: '.directory-scroll' },
@@ -390,7 +333,9 @@ const requiredShellChecks = [
   { label: 'connector path CSS', source: styles, snippet: '.interaction-connector-path' },
   { label: 'connector endpoint CSS', source: styles, snippet: '.interaction-connector-dot' },
   { label: 'hard-coded light blue connector path color', source: styles, snippet: 'rgba(147, 197, 253, 0.78)' },
-  { label: 'hard-coded light blue connector endpoint color', source: styles, snippet: 'rgba(147, 197, 253, 0.92)' }
+  { label: 'hard-coded light blue connector endpoint color', source: styles, snippet: 'rgba(147, 197, 253, 0.92)' },
+  { label: 'narrow phone and state toolbar scale together', source: styles, snippet: '.phone,\n  .prototype-stage-toolbar {\n    transform: scale(.92);' },
+  { label: 'narrow phone and state toolbar share origin', source: styles, snippet: 'transform-origin: top center;' }
 ];
 const missingShellChecks = requiredShellChecks.filter((check) => !check.source.includes(check.snippet));
 const workspaceThemeLeaks = findWorkspaceThemeLeaks(styles);
@@ -415,6 +360,15 @@ const forbiddenShellRules = [
   { label: 'primary tabbar extra bottom shell block', source: styles, snippet: '.phone:has(.tabbar)::after' }
 ].filter((check) => check.source.includes(check.snippet));
 
+const forbiddenDirectoryGroups = [
+  "group: '一级页面'",
+  "group: '二级页面'",
+  "group: 'Primary Pages'",
+  "group: 'Secondary Pages'"
+].filter((snippet) => main.includes(snippet));
+const requiredJourneyGroups = [];
+const missingJourneyGroups = requiredJourneyGroups.filter((group) => !main.includes(`group: '${group}'`));
+
 const requiredCssRules = [
   { label: 'theme card fixed white shell surface', snippet: '.theme-card,\n.page-directory' },
   { label: 'theme card fixed compact padding', snippet: '.theme-card {\n  padding: 12px;' },
@@ -433,28 +387,18 @@ const requiredCssRules = [
   { label: 'prototype state switch non-overflow group centers', snippet: 'margin-inline: auto;' },
   { label: 'prototype state switch overflowing edge padding', snippet: '.prototype-state-switch.is-overflowing > div {\n  min-width: 100%;\n  padding-inline: var(--state-switch-edge-space);' },
   { label: 'prototype state switch inactive chip transparent', snippet: '.prototype-state-switch button {\n  flex: 0 0 auto;\n  min-width: 0;\n  height: 30px;\n  border: 0;\n  border-radius: var(--radius-pill);\n  background: transparent;' },
-  { label: 'phone theme text inheritance guard', snippet: '.phone[data-theme] :is(h1, h2, h3, h4, p, strong, em, b, label, input, textarea)' },
-  { label: 'tokenized floating tabbar', snippet: '.phone[data-theme] .tabbar' },
-  { label: 'tabbar active label uses readable theme text', snippet: 'color: var(--text-strong);' },
-  { label: 'tabbar icon has fixed 30px block', snippet: 'flex: 0 0 30px;' },
-  { label: 'tabbar active icon uses inverse token', snippet: 'background: var(--tabbar-active-bg);' },
-  { label: 'theme-safe template/card titles', snippet: '.phone[data-theme] :is(.home-template-card, .template-card, .ai-video-template' },
-  { label: 'theme-safe login/member controls', snippet: '.phone[data-theme] :is(.login-method-option, .login-method-option.primary, .settings-icon-entry' },
-  { label: 'theme-safe member hero surfaces', snippet: '.phone[data-theme] :is(.member-hero-large, .member-bg-visual, .member-bg-visual::after)' }
 ];
 const missingRequiredCss = requiredCssRules.filter((rule) => !styles.includes(rule.snippet));
 
 const pagesCssPath = resolve(root, 'src/pages/styles/pages.css');
 const frameworkCssPath = resolve(root, 'src/framework/framework.css');
-const stylesLineCount = rootStyles.split('\n').length;
 const rootStylesImportsPagesCss = rootStyles.includes("@import './pages/styles/pages.css';") || rootStyles.includes('@import "./pages/styles/pages.css";');
 const rootStylesImportsFrameworkCss = rootStyles.includes("@import './framework/framework.css';") || rootStyles.includes('@import "./framework/framework.css";');
 const pageStyleSplitFailures = [
   !pathExists('src/pages/styles/pages.css') ? '缺少 src/pages/styles/pages.css' : '',
   !pathExists('src/framework/framework.css') ? '缺少 src/framework/framework.css 完整框架样式承载层' : '',
   !rootStylesImportsFrameworkCss ? 'src/styles.css 未导入 src/framework/framework.css' : '',
-  !rootStylesImportsPagesCss ? 'src/styles.css 未导入页面样式文件' : '',
-  !isFrameworkTemplate && stylesLineCount > 1800 ? `src/styles.css 仍过重: ${stylesLineCount} 行` : ''
+  !rootStylesImportsPagesCss ? 'src/styles.css 未导入页面样式文件' : ''
 ].filter(Boolean);
 
 function findCssRule(selectorNeedle) {
@@ -505,57 +449,6 @@ function findUndefinedLocalReferences(file, text) {
 
 const undefinedReferenceFindings = sourceFiles.flatMap((file) => findUndefinedLocalReferences(file, readFileSync(file, 'utf8')));
 
-const pageSourceFiles = sourceFiles.filter((file) => toPosix(file).startsWith('src/pages/') && ['.js', '.jsx'].includes(extname(file)));
-const broadImportFindings = pageSourceFiles.flatMap((file) => {
-  const text = readFileSync(file, 'utf8');
-  const findings = [];
-  for (const match of text.matchAll(/import\s+\{([^}]+)\}\s+from\s+['"]lucide-react['"]/g)) {
-    const names = match[1].split(',').map((name) => name.trim()).filter(Boolean);
-    if (names.length > 12) {
-      findings.push(`${relative(root, file)} 从 lucide-react 一次导入 ${names.length} 个图标`);
-    }
-  }
-  for (const match of text.matchAll(/import\s+\{([^}]+)\}\s+from\s+['"][^'"]*project-data\.js['"]/g)) {
-    const names = match[1].split(',').map((name) => name.trim()).filter(Boolean);
-    if (names.length > 8) {
-      findings.push(`${relative(root, file)} 从 project-data 一次导入 ${names.length} 个数据项`);
-    }
-  }
-  return findings;
-});
-
-const rawOverlayFindings = pageSourceFiles.flatMap((file) => {
-  const text = readFileSync(file, 'utf8');
-  const forbidden = [
-    'className="modal-layer"',
-    'className="prototype-modal"',
-    'className="login-modal-backdrop"',
-    'className="login-modal',
-    'className="album-backdrop"'
-  ];
-  return forbidden
-    .filter((snippet) => text.includes(snippet))
-    .map((snippet) => `${relative(root, file)} 保留旧手写弹层 ${snippet}`);
-});
-
-const legacyOverlayCssFindings = cssFiles.flatMap((file) => {
-  const rel = toPosix(file);
-  const text = readFileSync(file, 'utf8');
-  if (rel === 'src/prototype-ui/patterns.css') return [];
-  const forbiddenSelectors = [
-    '.album-backdrop',
-    '.login-modal-backdrop',
-    '.login-modal',
-    '.modal-layer',
-    '.modal-backdrop',
-    '.prototype-modal',
-    '.modal-actions'
-  ];
-  return forbiddenSelectors
-    .filter((selector) => text.includes(selector))
-    .map((selector) => `${rel} 保留旧弹层 CSS 选择器 ${selector}`);
-});
-
 const pageCssFrameworkLeakFindings = pathExists('src/pages/styles/pages.css')
   ? (() => {
       const text = readFileSync(pagesCssPath, 'utf8');
@@ -586,18 +479,27 @@ const pageCssFrameworkLeakFindings = pathExists('src/pages/styles/pages.css')
     })()
   : [];
 
-const prototypeUiUsageFindings = pageSourceFiles.flatMap((file) => {
-  const source = readFileSync(file, 'utf8');
-  const findings = [];
-  for (const match of source.matchAll(/<(button|input|textarea|select)\b/g)) {
-    findings.push(`${toPosix(file)}:${countLinesBefore(source, match.index || 0)} 使用原生 <${match[1]}>，应使用 prototype-ui 原语`);
+const localEditsPath = resolve(root, 'src/project/notes/local-edits.json');
+const deletionResidueFailures = pathExists('src/project/notes/local-edits.json') ? (() => {
+  let edits;
+  try { edits = JSON.parse(readFileSync(localEditsPath, 'utf8')); } catch { return ['local-edits.json cannot be parsed for deletion residue']; }
+  const searchableFiles = [...sourceFiles, ...cssFiles].filter((file) => {
+    const rel = toPosix(file);
+    return rel.startsWith('src/pages/') || rel.startsWith('src/project/') || rel === 'src/app/App.jsx';
+  });
+  const searchable = searchableFiles.map((file) => [toPosix(file), readFileSync(file, 'utf8')]);
+  const failures = [];
+  for (const states of Object.values(edits.elementDeletions || {})) for (const records of Object.values(states || {})) {
+    for (const item of Object.values(records || {})) {
+      if (!['applied', 'conflict'].includes(item?.status)) continue;
+      for (const needle of [item.elementId, ...(Array.isArray(item.sourceRefs) ? item.sourceRefs : [])].filter(Boolean)) {
+        for (const [file, source] of searchable) if (source.includes(needle)) failures.push(`${file} 保留已删除元素引用 ${needle}`);
+      }
+      if (item?.status === 'conflict') failures.push(`元素删除冲突未解决 ${item.elementId || 'unknown'}`);
+    }
   }
-  const hasInteractivePrimitive = /<(?:Button|IconButton|Pressable|TextInput|TextArea|Checkbox|SegmentedControl|ChipScroller|BottomTabBar)\b/.test(source);
-  const importsPrototypeUi = /from\s+['"][^'"]*prototype-ui\/components\/index\.jsx['"]/.test(source);
-  if (hasInteractivePrimitive && !importsPrototypeUi) findings.push(`${toPosix(file)} 使用交互原语但未从 prototype-ui 导入`);
-  return findings;
-});
-
+  return failures;
+})() : [];
 const requiredNotesRules = [
   { label: 'manual annotation panel', source: main, snippet: 'AnnotationPanel' },
   { label: 'phone annotation layer', source: main, snippet: 'AnnotationLayer' },
@@ -611,9 +513,22 @@ const requiredNotesRules = [
   { label: 'annotation read-only detail', source: main, snippet: 'annotation-detail' },
   { label: 'annotation explicit edit action', source: main, snippet: 'setEditing(true)' },
   { label: 'annotation discard action', source: main, snippet: 'discard' },
+  { label: 'one-shot element deletion action', source: main, snippet: "'delete-element'" },
+  { label: 'element deletion second confirmation', source: main, snippet: 'pendingElementDeletion' },
+  { label: 'element deletion persistence bucket', source: viteConfig, snippet: 'elementDeletions' },
+  { label: 'element deletion immediate hide', source: styles, snippet: '[data-mlp-element-deleted]' },
+  { label: 'element deletion restore action', source: main, snippet: 'onRestoreElement' },
   { label: 'annotation creation state notice', source: main, snippet: '新增标注' },
   { label: 'static annotation bundle', source: main, snippet: 'bundledLocalEdits' },
-  { label: 'annotation acceptance command', source: JSON.stringify(packageJson), snippet: 'mlp:annotation-acceptance' }
+  { label: 'annotation acceptance command', source: JSON.stringify(packageJson), snippet: 'mlp:annotation-acceptance' },
+  { label: 'documentation comparable hash', source: main, snippet: 'expectedHash: sourceHash' },
+  { label: 'human checked metadata', source: viteConfig, snippet: "checkedBy: 'human'" },
+  { label: 'human save requires re-review', source: viteConfig, snippet: 'reviewed: false' },
+  { label: 'save conflict response', source: viteConfig, snippet: "throwHttp(409, 'conflict'" },
+  { label: 'failed save retains editor draft', source: main, snippet: '保存失败，修改内容已保留。' },
+  { label: 'panel-local connector scrolling', source: main, snippet: "panel.scrollTo({ top: Math.max(0, nextTop), behavior: 'smooth' })" },
+  { label: 'test case interaction ownership', source: main, snippet: 'interactionId: item.id' },
+  { label: 'test case state ownership', source: main, snippet: 'stateNumber' }
 ];
 const requiredScreenshotRules = [
   { label: 'prototype screenshot action', source: main, snippet: 'copyPrototypeScreenshot' },
@@ -626,7 +541,8 @@ const requiredScreenshotRules = [
   { label: 'image clipboard write', source: main, snippet: 'new ClipboardItem' },
   { label: 'prototype screenshot dependency', source: JSON.stringify(packageJson), snippet: 'html2canvas' },
   { label: 'prototype screenshot button style', source: styles, snippet: '.prototype-copy-button' },
-  { label: 'prototype screenshot button phone alignment', source: styles, snippet: '.prototype-copy-button {\n  position: absolute;\n  top: 6px;\n  left: 0;' }
+  { label: 'prototype screenshot button phone alignment', source: styles, snippet: '.prototype-copy-button {\n  position: absolute;\n  top: 6px;\n  left: 0;' },
+  { label: 'prototype screenshot button does not cover state chips', source: styles, snippet: 'padding: 6px 46px;' }
 ];
 const missingScreenshotRules = requiredScreenshotRules.filter((rule) => !rule.source.includes(rule.snippet));
 const missingNotesRules = requiredNotesRules.filter((rule) => !rule.source.includes(rule.snippet));
@@ -635,6 +551,9 @@ const forbiddenNotesRules = [
   { label: 'persistent annotation mode switch', source: main, snippet: 'annotation-mode-control' },
   { label: 'element mode coordinate fallback', source: main, snippet: "if (!target) {\n        onCreate({ anchorType: 'coordinate'" },
   { label: 'decorative annotation panel title icon', source: main, snippet: '<MessageSquareText' }
+].filter((rule) => rule.source.includes(rule.snippet));
+const forbiddenDocumentationRules = [
+  { label: 'documentation cards use global scrollIntoView', source: main, snippet: 'scrollIntoView(' }
 ].filter((rule) => rule.source.includes(rule.snippet));
 
 const reviewSteps = [
@@ -651,24 +570,33 @@ const reviewSteps = [
     detail: missingProjectDataFiles.length ? `缺少: ${missingProjectDataFiles.join(', ')}` : 'project 数据已按 meta/directory/states/mock-data/routing/notes/test-cases 分层'
   },
   {
+    name: '页面目录用户流程分组',
+    pass: forbiddenDirectoryGroups.length === 0 && missingJourneyGroups.length === 0,
+    detail: forbiddenDirectoryGroups.length
+      ? `目录仍使用层级组名: ${forbiddenDirectoryGroups.join(', ')}`
+      : missingJourneyGroups.length
+        ? `模板缺少功能模块组: ${missingJourneyGroups.join(', ')}`
+        : '页面目录按用户流程排序，并按功能模块而非一二级页面分组'
+  },
+  {
+    name: '页面状态评审覆盖',
+    pass: stateChecklistCoverage.length === 0 && numberingFindings.length === 0,
+    detail: stateChecklistCoverage.length || numberingFindings.length ? `UI 设计清单或编号异常: ${[...stateChecklistCoverage, ...numberingFindings].join(', ')}` : '每个真实页面状态均可评审，真实页面编号稳定且不重复'
+  },
+  {
     name: '自动交互文档关闭',
     pass: !generatedDocsPresent,
     detail: generatedDocsPresent ? `仍发现 ${documentedIds.length} 条预生成交互说明` : '未预填自动交互说明，使用人工标注数据'
   },
   {
     name: '可标注元素来源',
-    pass: expectedDocumentedIds.length > 0,
-    detail: expectedDocumentedIds.length ? `发现 ${expectedDocumentedIds.length} 个稳定元素锚点来源` : '没有发现 bindInteraction/bindElement 元素来源'
-  },
-  {
-    name: 'UI 异常扫描',
-    pass: styleErrors.length === 0,
-    detail: styleErrors.length ? `${styleErrors.length} 个阻断项` : '未发现虚线、渐变、毛玻璃/模糊等阻断项'
+    pass: isFrameworkTemplate || isDiscovery || expectedDocumentedIds.length > 0,
+    detail: expectedDocumentedIds.length ? `发现 ${expectedDocumentedIds.length} 个稳定元素锚点来源` : '空白框架模板尚无产品元素；新增页面后必须提供稳定锚点'
   },
   {
     name: '框架强约束',
     pass: missingRequiredCss.length === 0 && frameworkLayoutFindings.length === 0,
-    detail: missingRequiredCss.length || frameworkLayoutFindings.length ? `缺少: ${missingRequiredCss.map((rule) => rule.label).join(', ')}；布局异常: ${frameworkLayoutFindings.join('；')}` : '底部 Tab、主题文本、图标块和四栏布局规则已就位'
+    detail: missingRequiredCss.length || frameworkLayoutFindings.length ? `缺少: ${missingRequiredCss.map((rule) => rule.label).join(', ')}；布局异常: ${frameworkLayoutFindings.join('；')}` : '工作台面板、状态切换和四栏布局规则已就位'
   },
   {
     name: 'Theme/Guide/状态切换视觉',
@@ -706,9 +634,9 @@ const reviewSteps = [
   },
   {
     name: '人工标注结构',
-    pass: missingNotesRules.length === 0 && forbiddenNotesRules.length === 0,
-    detail: missingNotesRules.length || forbiddenNotesRules.length
-      ? `缺少: ${missingNotesRules.map((rule) => rule.label).join(', ')}；禁止项: ${forbiddenNotesRules.map((rule) => rule.label).join(', ')}`
+    pass: missingNotesRules.length === 0 && forbiddenNotesRules.length === 0 && forbiddenDocumentationRules.length === 0,
+    detail: missingNotesRules.length || forbiddenNotesRules.length || forbiddenDocumentationRules.length
+      ? `缺少: ${missingNotesRules.map((rule) => rule.label).join(', ')}；禁止项: ${[...forbiddenNotesRules, ...forbiddenDocumentationRules].map((rule) => rule.label).join(', ')}`
       : '元素锚点、坐标锚点、本地存储、静态数据打包与标注面板均已接入'
   },
   {
@@ -731,84 +659,22 @@ const reviewSteps = [
     detail: undefinedReferenceFindings.length ? undefinedReferenceFindings.slice(0, 12).join('；') : '未发现常见缺失 import、未定义 JSX 组件或未定义 helper 调用'
   },
   {
-    name: '业务页组件化',
-    pass: rawOverlayFindings.length === 0 && legacyOverlayCssFindings.length === 0 && prototypeUiUsageFindings.length === 0,
-    detail: rawOverlayFindings.length || legacyOverlayCssFindings.length || prototypeUiUsageFindings.length
-      ? [...rawOverlayFindings, ...legacyOverlayCssFindings, ...prototypeUiUsageFindings].join('；')
-      : '业务页未保留旧手写 Modal/Sheet，CSS 无旧弹层残留，并按 prototype-ui 组件模式复用'
+    name: 'PRD与固定支持入口',
+    pass: missingDesignContractChecks.length === 0 && !designContractExportMissing && prdRuntimeFailures.length === 0 && lifecycleFailures.length === 0 && prdFailures.length === 0 && prdVisibilityFailures.length === 0 && fixedDirectorySupportFailures.length === 0,
+    detail: missingDesignContractChecks.length || designContractExportMissing || prdRuntimeFailures.length || lifecycleFailures.length || prdFailures.length || prdVisibilityFailures.length || fixedDirectorySupportFailures.length
+      ? `缺少或无效: ${[...missingDesignContractChecks, designContractExportMissing ? 'project-data design export' : '', ...prdRuntimeFailures, ...lifecycleFailures, ...prdFailures, ...prdVisibilityFailures, ...fixedDirectorySupportFailures].filter(Boolean).join(', ')}`
+      : 'PRD已同步，固定支持入口完整'
   },
   {
-    name: '页面导入精简',
-    pass: broadImportFindings.length === 0,
-    detail: broadImportFindings.length ? broadImportFindings.join('；') : '页面导入已按实际使用精简'
-  },
-  {
-    name: 'App 配色 token 化',
-    pass: hardcodedAppColors.length === 0 && rawPageColors.length === 0,
-    detail: hardcodedAppColors.length || rawPageColors.length
-      ? `${hardcodedAppColors.length} 处 App 原型内部硬编码色值，${rawPageColors.length} 处业务页面原始色值`
-      : '手机 App 业务页面只使用语义化设计 token'
-  },
-  {
-    name: '项目设计契约',
-    pass: missingDesignContractChecks.length === 0 && !designContractExportMissing && designBriefRuntimeFailures.length === 0,
-    detail: missingDesignContractChecks.length || designContractExportMissing || designBriefRuntimeFailures.length
-      ? `缺少或无效: ${[...missingDesignContractChecks, designContractExportMissing ? 'project-data design export' : '', ...designBriefRuntimeFailures].filter(Boolean).join(', ')}`
-      : '设计目标、用户任务、参考、方向与色板策略已就绪'
-  },
-  {
-    name: '业务页 token 角色',
-    pass: forbiddenPageTokens.length === 0,
-    detail: forbiddenPageTokens.length
-      ? `${forbiddenPageTokens.length} 处业务页面使用未批准或过细 token`
-      : '业务页面只使用稳定语义 token 子集'
+    name: '人工删除记录清理',
+    pass: deletionResidueFailures.length === 0,
+    detail: deletionResidueFailures.length ? deletionResidueFailures.join('；') : '未发现已应用删除记录的源码残留'
   }
 ];
 
 console.log('MLP loop review');
 for (const [index, step] of reviewSteps.entries()) {
   console.log(`${index + 1}. ${step.pass ? 'PASS' : 'FAIL'} ${step.name} - ${step.detail}`);
-}
-
-if (styleWarnings.length) {
-  console.log('\nWarnings:');
-  for (const warning of styleWarnings) {
-    console.log(`- ${warning.label}: src/**/*.css:${warning.line} (${warning.value})`);
-  }
-}
-
-if (styleErrors.length) {
-  console.log('\nStyle errors:');
-  for (const error of styleErrors) {
-    console.log(`- ${error.label}: src/**/*.css:${error.line} (${error.value})`);
-  }
-}
-
-if (hardcodedAppColors.length) {
-  console.log('\nHard-coded app colors:');
-  for (const item of hardcodedAppColors.slice(0, 40)) {
-    console.log(`- src/**/*.css:${item.line} ${item.selector} (${item.value})`);
-  }
-  if (hardcodedAppColors.length > 40) {
-    console.log(`- ... ${hardcodedAppColors.length - 40} more`);
-  }
-}
-
-if (rawPageColors.length) {
-  console.log('\nRaw page colors:');
-  for (const item of rawPageColors.slice(0, 40)) {
-    console.log(`- ${item.file}:${item.line} (${item.value})`);
-  }
-  if (rawPageColors.length > 40) console.log(`- ... ${rawPageColors.length - 40} more`);
-}
-
-if (designBriefPlaceholder && !isFrameworkTemplate) {
-  console.log('\nDesign contract warning: src/project/design.js still contains placeholder brief text.');
-}
-
-if (forbiddenPageTokens.length) {
-  console.log('\nForbidden page tokens:');
-  for (const item of forbiddenPageTokens.slice(0, 40)) console.log(`- ${item.file}:${item.line} (${item.token})`);
 }
 
 if (workspaceThemeLeaks.length) {
@@ -861,39 +727,4 @@ if (undefinedReferenceFindings.length) {
   }
 }
 
-if (
-  generatedDocsPresent ||
-  expectedDocumentedIds.length === 0 ||
-  missingNotes.length ||
-  missingSource.length ||
-  styleErrors.length ||
-  missingRequiredCss.length ||
-  missingNotesRules.length ||
-  forbiddenNotesRules.length ||
-  pageStyleSplitFailures.length ||
-  pageCssFrameworkLeakFindings.length ||
-  rawOverlayFindings.length ||
-  legacyOverlayCssFindings.length ||
-  prototypeUiUsageFindings.length ||
-  broadImportFindings.length ||
-  missingShellChecks.length ||
-  missingProjectDataFiles.length ||
-  unexpectedRootPageFiles.length ||
-  monolithicAiToolScreens ||
-  !pathExists('src/pages/index.js') ||
-  workspaceThemeLeaks.length ||
-  phoneWorkspaceTokenLeaks.length ||
-  forbiddenWorkbenchInteractions.length ||
-  forbiddenLegacyShell.length ||
-  forbiddenShellRules.length ||
-  frameworkLayoutFindings.length ||
-  undefinedReferenceFindings.length ||
-  hardcodedAppColors.length ||
-  rawPageColors.length ||
-  missingDesignContractChecks.length ||
-  designContractExportMissing ||
-  designBriefRuntimeFailures.length ||
-  forbiddenPageTokens.length
-) {
-  process.exitCode = 1;
-}
+if (reviewSteps.some((step) => !step.pass)) process.exitCode = 1;

@@ -1,4 +1,4 @@
 interface:
   display_name: "MLP"
   short_description: "Design consistent mobile product flows and clickable PM prototypes."
-  default_prompt: "Use mlp to define the mobile product goal, establish a binding design contract, explore strong layout directions for key screens, and build a consistent clickable prototype with Product Notes, checks, preview, and optional deployment."
+  default_prompt: "Use mlp to discuss the mobile product requirements and design direction, update the visible in-project PRD before every prototype change, continue without an intermediate confirmation gate, and build a consistent clickable prototype with checks, preview, and optional deployment."
